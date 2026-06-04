@@ -347,7 +347,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                       const SizedBox(height: 4),
                       Text(
                         title,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),

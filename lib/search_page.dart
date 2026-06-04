@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert'; // Serve per leggere il formato JSON che ci manda Google
@@ -16,6 +17,15 @@ class _SearchPageState extends State<SearchPage> {
   // Questo "controller" legge cosa scrive l'utente nella barra di ricerca
   final TextEditingController _searchController = TextEditingController();
 
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   // Qui salveremo la lista dei libri trovati
   List<dynamic> _searchResults = [];
 
@@ -30,6 +40,7 @@ class _SearchPageState extends State<SearchPage> {
 
   // Questa è la funzione che chiama le API di Open Library (gratuite, senza API key!)
   Future<void> searchBooks(String query) async {
+    _debounce?.cancel();
     if (query.isEmpty) return; // Se l'utente non ha scritto nulla, fermati
 
     setState(() {
@@ -63,13 +74,17 @@ class _SearchPageState extends State<SearchPage> {
         });
       } else {
         setState(() {
-          _errorMessage = 'Errore nella ricerca (codice: ${response.statusCode})';
+          if (response.statusCode == 422) {
+            _errorMessage = 'Ricerca troppo breve o non valida. Prova a scrivere parole intere.';
+          } else {
+            _errorMessage = 'Si è verificato un problema nella ricerca. Riprova più tardi.';
+          }
         });
         print('Errore nella ricerca: ${response.statusCode}');
       }
     } catch (e, stackTrace) {
       setState(() {
-        _errorMessage = 'Errore di connessione:\n$e';
+        _errorMessage = 'Errore di connessione. Controlla la tua rete e riprova.';
       });
       print('Errore di connessione: $e');
       print('Stack trace: $stackTrace');
@@ -102,9 +117,24 @@ class _SearchPageState extends State<SearchPage> {
                   },
                 ),
               ),
-              onSubmitted: (value) => searchBooks(
-                value,
-              ), // Avvia anche se premo "Invio" sulla tastiera
+              onChanged: (value) {
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                if (value.trim().isEmpty) {
+                  setState(() {
+                    _searchResults = [];
+                    _errorMessage = null;
+                    _isLoading = false;
+                  });
+                } else {
+                  _debounce = Timer(const Duration(milliseconds: 500), () {
+                    searchBooks(value);
+                  });
+                }
+              },
+              onSubmitted: (value) {
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                searchBooks(value);
+              }, // Avvia anche se premo "Invio" sulla tastiera
             ),
           ),
 
@@ -117,14 +147,26 @@ class _SearchPageState extends State<SearchPage> {
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Text(
-                            _errorMessage!,
-                            style: const TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                            ),
-                            textAlign: TextAlign.center,
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off_rounded,
+                                color: Colors.grey[400],
+                                size: 64,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         ),
                       )
@@ -192,7 +234,11 @@ class _SearchPageState extends State<SearchPage> {
                                         const Icon(Icons.book, size: 50),
                                   )
                                 : const Icon(Icons.book, size: 50),
-                            title: Text(title),
+                            title: Text(
+                              title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                             subtitle: Text(authors),
                             trailing: const Icon(
                               Icons.add_circle_outline,
