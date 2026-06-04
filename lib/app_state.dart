@@ -64,6 +64,7 @@ class AppState extends ChangeNotifier {
 
   // --- IMPOSTAZIONI ---
   String _languageCode = 'ita';
+  ThemeMode _themeMode = ThemeMode.system;
 
   // --- STATISTICHE ---
   int _totalBooksRead = 0;
@@ -78,6 +79,7 @@ class AppState extends ChangeNotifier {
   String get userName => _userName;
   String get profileImageBase64 => _profileImageBase64;
   String get languageCode => _languageCode;
+  ThemeMode get themeMode => _themeMode;
   bool get isFirstLaunch => _userName.isEmpty;
   int get totalBooksRead => _totalBooksRead;
   int get totalReadingSeconds => _totalReadingSeconds;
@@ -100,6 +102,15 @@ class AppState extends ChangeNotifier {
     } else {
       final systemLoc = ui.PlatformDispatcher.instance.locale.languageCode;
       _languageCode = _mapLanguageToOpenLibrary(systemLoc);
+    }
+
+    final savedTheme = prefs.getString('themeMode');
+    if (savedTheme == 'light') {
+      _themeMode = ThemeMode.light;
+    } else if (savedTheme == 'dark') {
+      _themeMode = ThemeMode.dark;
+    } else {
+      _themeMode = ThemeMode.system;
     }
 
     _totalBooksRead = prefs.getInt('totalBooksRead') ?? 0;
@@ -132,6 +143,11 @@ class AppState extends ChangeNotifier {
     await prefs.setString('userName', _userName);
     await prefs.setString('profileImageBase64', _profileImageBase64);
     await prefs.setString('languageCode', _languageCode);
+    
+    String themeStr = 'system';
+    if (_themeMode == ThemeMode.light) themeStr = 'light';
+    if (_themeMode == ThemeMode.dark) themeStr = 'dark';
+    await prefs.setString('themeMode', themeStr);
     await prefs.setInt('totalBooksRead', _totalBooksRead);
     await prefs.setInt('totalReadingSeconds', _totalReadingSeconds);
 
@@ -156,6 +172,12 @@ class AppState extends ChangeNotifier {
 
   void setLanguageCode(String newCode) {
     _languageCode = newCode;
+    saveState();
+    notifyListeners();
+  }
+
+  void setThemeMode(ThemeMode newMode) {
+    _themeMode = newMode;
     saveState();
     notifyListeners();
   }

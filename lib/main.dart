@@ -19,13 +19,26 @@ class BookTimeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Book Time',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const HomePage(),
+    return ListenableBuilder(
+      listenable: appState,
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Book Time',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.deepPurple,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          themeMode: appState.themeMode,
+          home: const HomePage(),
+        );
+      },
     );
   }
 }
@@ -235,6 +248,25 @@ class _HomePageState extends State<HomePage> {
                     onChanged: (String? newValue) {
                       if (newValue != null) {
                         appState.setLanguageCode(newValue);
+                        setStateDialog(() {});
+                        setState(() {});
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Tema dell\'app:'),
+                  const SizedBox(height: 8),
+                  DropdownButton<ThemeMode>(
+                    isExpanded: true,
+                    value: appState.themeMode,
+                    items: const [
+                      DropdownMenuItem(value: ThemeMode.system, child: Text('Sistema')),
+                      DropdownMenuItem(value: ThemeMode.light, child: Text('Chiaro')),
+                      DropdownMenuItem(value: ThemeMode.dark, child: Text('Scuro')),
+                    ],
+                    onChanged: (ThemeMode? newValue) {
+                      if (newValue != null) {
+                        appState.setThemeMode(newValue);
                         setStateDialog(() {});
                         setState(() {});
                       }
@@ -480,7 +512,7 @@ class _HomePageState extends State<HomePage> {
                   margin: const EdgeInsets.all(16.0),
                   padding: const EdgeInsets.all(16.0),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -511,9 +543,12 @@ class _HomePageState extends State<HomePage> {
                               appState.userName.isNotEmpty
                                   ? appState.userName
                                   : 'Username',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark 
+                                    ? Colors.grey[400] 
+                                    : Colors.black87,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
