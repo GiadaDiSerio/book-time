@@ -450,6 +450,33 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ],
+                      if (appState.booksRead.any((b) => b.title == book.title)) ...[
+                        const SizedBox(height: 24),
+                        const Text(
+                          'La tua recensione',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(5, (index) {
+                            return IconButton(
+                              padding: EdgeInsets.zero,
+                              icon: Icon(
+                                index < book.rating ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                                size: 40,
+                              ),
+                              onPressed: () {
+                                setStateSheet(() {
+                                  book.rating = index + 1;
+                                });
+                                appState.rateBook(book.title, index + 1);
+                              },
+                            );
+                          }),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       const Divider(),
                       // Trama

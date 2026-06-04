@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
+import 'rating_dialog.dart';
 
 enum BookCategory { reading, toRead, read }
 
@@ -70,9 +73,9 @@ class _BookListPageState extends State<BookListPage> {
             onPressed: () {
               final page = int.tryParse(controller.text) ?? book.currentPage;
               final clampedPage = page.clamp(0, book.totalPages);
-              appState.updateReadingProgress(book.title, clampedPage);
+              bool completed = appState.updateReadingProgress(book.title, clampedPage);
               Navigator.pop(ctx);
-              if (clampedPage >= book.totalPages) {
+              if (completed) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(
@@ -81,6 +84,9 @@ class _BookListPageState extends State<BookListPage> {
                     backgroundColor: Colors.green,
                   ),
                 );
+                showRatingDialog(context, book.title, (rating) {
+                  if (rating > 0) appState.rateBook(book.title, rating);
+                });
               }
             },
             style: ElevatedButton.styleFrom(
@@ -129,7 +135,13 @@ class _BookListPageState extends State<BookListPage> {
   Widget _buildBookCard(Book book) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Padding(
+      child: InkWell(
+        onTap: () {
+          if (widget.category == BookCategory.read) {
+            _showBookDetails(book);
+          }
+        },
+        child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,8 +152,8 @@ class _BookListPageState extends State<BookListPage> {
               child: book.coverUrl != null
                   ? Image.network(
                       book.coverUrl!,
-                      width: 70,
-                      height: 105,
+                      width: 80,
+                      height: 120,
                       fit: BoxFit.cover,
                       errorBuilder: (ctx, err, st) => _buildPlaceholderCover(),
                     )
@@ -219,6 +231,23 @@ class _BookListPageState extends State<BookListPage> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    GestureDetector(
+                      onTap: () {
+                        showRatingDialog(context, book.title, (rating) {
+                          appState.rateBook(book.title, rating);
+                        });
+                      },
+                      child: Row(
+                        children: List.generate(5, (index) {
+                          return Icon(
+                            index < book.rating ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 24, // Leggermente più grandi
+                          );
+                        }),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -226,13 +255,178 @@ class _BookListPageState extends State<BookListPage> {
           ],
         ),
       ),
+      ),
     );
   }
 
-  Widget _buildPlaceholderCover() {
+  void _showBookDetails(Book book) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        String plot = 'Caricamento trama...';
+        bool hasFetched = false;
+
+        return StatefulBuilder(
+          builder: (context, setStateSheet) {
+            if (!hasFetched) {
+              hasFetched = true;
+              _fetchBookPlot(book.title, book.author).then((fetchedPlot) {
+                if (mounted) {
+                  setStateSheet(() {
+                    plot = fetchedPlot;
+                  });
+                }
+              });
+            }
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                  top: 24, left: 24, right: 24,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: book.coverUrl != null
+                            ? Image.network(
+                                book.coverUrl!,
+                                width: 120,
+                                height: 180,
+                                fit: BoxFit.cover,
+                                errorBuilder: (ctx, err, st) => _buildPlaceholderCover(large: true),
+                              )
+                            : _buildPlaceholderCover(large: true),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        book.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF7B1FA2),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        book.author,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'La tua recensione',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          return IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: Icon(
+                              index < book.rating ? Icons.star : Icons.star_border,
+                              color: Colors.amber,
+                              size: 40,
+                            ),
+                            onPressed: () {
+                              setStateSheet(() {
+                                book.rating = index + 1;
+                              });
+                              appState.rateBook(book.title, index + 1);
+                            },
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Trama',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF7B1FA2),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              constraints: const BoxConstraints(maxHeight: 200),
+                              child: SingleChildScrollView(
+                                child: Text(
+                                  plot,
+                                  style: const TextStyle(fontSize: 14),
+                                  textAlign: TextAlign.justify,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<String> _fetchBookPlot(String title, String author) async {
+    try {
+      final searchResponse = await http.get(Uri.parse(
+        'https://openlibrary.org/search.json?title=${Uri.encodeComponent(title)}&limit=1',
+      ));
+      if (searchResponse.statusCode == 200) {
+        final data = json.decode(searchResponse.body);
+        final docs = data['docs'] as List? ?? [];
+        if (docs.isNotEmpty && docs[0]['key'] != null) {
+          final bookKey = docs[0]['key'];
+          final descResponse = await http.get(
+            Uri.parse('https://openlibrary.org$bookKey.json'),
+          );
+          if (descResponse.statusCode == 200) {
+            final descData = json.decode(descResponse.body);
+            if (descData['description'] != null) {
+              if (descData['description'] is String) {
+                return descData['description'];
+              } else if (descData['description'] is Map &&
+                  descData['description']['value'] != null) {
+                return descData['description']['value'];
+              }
+            }
+          }
+        }
+      }
+      return 'Nessuna trama disponibile.';
+    } catch (e) {
+      return 'Errore nel caricamento della trama.';
+    }
+  }
+
+  Widget _buildPlaceholderCover({bool large = false}) {
     return Container(
-      width: 70,
-      height: 105,
+      width: large ? 120 : 80,
+      height: large ? 180 : 120,
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(8),

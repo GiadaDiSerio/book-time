@@ -5,6 +5,7 @@ import 'dart:convert'; // Serve per leggere il formato JSON che ci manda Google
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 import 'suggestions_widget.dart';
+import 'rating_dialog.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -381,9 +382,11 @@ class _SearchPageState extends State<SearchPage> {
                                                 title: const Text('Aggiungi come "Letto"'),
                                                 onTap: () {
                                                   final messenger = ScaffoldMessenger.of(context);
-                                                  appState.addBookRead(title, author: authors, coverUrl: imageUrl);
-                                                  Navigator.pop(context);
-                                                  messenger.showSnackBar(const SnackBar(content: Text('Aggiunto ai "Letti"!')));
+                                                  Navigator.pop(context); // Chiudi la scheda del libro
+                                                  showRatingDialog(context, title, (rating) {
+                                                    appState.addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating);
+                                                    messenger.showSnackBar(const SnackBar(content: Text('Aggiunto ai "Letti"!')));
+                                                  });
                                                 },
                                               ),
                                               const SizedBox(height: 8),

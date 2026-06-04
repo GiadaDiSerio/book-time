@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
@@ -160,6 +159,16 @@ class _TimerPageState extends State<TimerPage> {
               final hours = int.tryParse(hoursController.text) ?? 0;
               final minutes = int.tryParse(minutesController.text) ?? 0;
               final totalSeconds = (hours * 3600) + (minutes * 60);
+
+              if (totalSeconds > 86400) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('❌ Non puoi aggiungere più di 24 ore alla volta!'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
 
               if (totalSeconds > 0) {
                 appState.addReadingTime(totalSeconds);

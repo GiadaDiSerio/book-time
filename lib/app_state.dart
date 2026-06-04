@@ -9,6 +9,7 @@ class Book {
   final int totalPages;
   int currentPage; // La pagina a cui sei arrivato
   final String? coverUrl;
+  int rating;
 
   Book({
     required this.title,
@@ -16,6 +17,7 @@ class Book {
     required this.totalPages,
     this.currentPage = 0,
     this.coverUrl,
+    this.rating = 0,
   });
 
   // Percentuale di completamento (da 0.0 a 1.0)
@@ -32,6 +34,7 @@ class Book {
       'totalPages': totalPages,
       'currentPage': currentPage,
       'coverUrl': coverUrl,
+      'rating': rating,
     };
   }
 
@@ -43,6 +46,7 @@ class Book {
       totalPages: json['totalPages'] ?? 0,
       currentPage: json['currentPage'] ?? 0,
       coverUrl: json['coverUrl'],
+      rating: json['rating'] ?? 0,
     );
   }
 }
@@ -75,6 +79,7 @@ class AppState extends ChangeNotifier {
   List<Book> _booksReading = [];
   List<Book> _booksRead = [];
 
+
   // --- GETTERS ---
   String get userName => _userName;
   String get profileImageBase64 => _profileImageBase64;
@@ -87,6 +92,7 @@ class AppState extends ChangeNotifier {
   List<Book> get booksToRead => List.unmodifiable(_booksToRead);
   List<Book> get booksReading => List.unmodifiable(_booksReading);
   List<Book> get booksRead => List.unmodifiable(_booksRead);
+  
 
   // --- PERSISTENZA DEI DATI ---
 
@@ -134,6 +140,8 @@ class AppState extends ChangeNotifier {
       _booksRead = decoded.map((item) => Book.fromJson(item)).toList();
     }
 
+
+
     notifyListeners();
   }
 
@@ -154,6 +162,7 @@ class AppState extends ChangeNotifier {
     await prefs.setString('booksToRead', jsonEncode(_booksToRead.map((b) => b.toJson()).toList()));
     await prefs.setString('booksReading', jsonEncode(_booksReading.map((b) => b.toJson()).toList()));
     await prefs.setString('booksRead', jsonEncode(_booksRead.map((b) => b.toJson()).toList()));
+
   }
 
   // --- METODI PER AGGIORNARE LO STATO ---
@@ -195,6 +204,9 @@ class AppState extends ChangeNotifier {
   
   void addReadingTime(int seconds) {
     _totalReadingSeconds += seconds;
+    
+
+
     saveState();
     notifyListeners(); // Avvisa l'interfaccia di aggiornarsi
   }
@@ -215,31 +227,51 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addBookRead(String title, {String author = 'Autore sconosciuto', String? coverUrl}) {
+  void addBookRead(String title, {String author = 'Autore sconosciuto', String? coverUrl, int rating = 0}) {
     if (_booksRead.any((b) => b.title == title)) return;
-    _booksRead.add(Book(title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl));
+    _booksRead.add(Book(title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
     _totalBooksRead++; // Incrementa la statistica!
     saveState();
     notifyListeners();
   }
 
+  void rateBook(String title, int rating) {
+    final index = _booksRead.indexWhere((b) => b.title == title);
+    if (index != -1) {
+      _booksRead[index].rating = rating;
+      saveState();
+      notifyListeners();
+      return;
+    }
+    final readingIndex = _booksReading.indexWhere((b) => b.title == title);
+    if (readingIndex != -1) {
+      _booksReading[readingIndex].rating = rating;
+      saveState();
+      notifyListeners();
+      return;
+    }
+  }
+
   // Aggiorna il progresso di lettura di un libro "In lettura"
-  void updateReadingProgress(String title, int newCurrentPage) {
+  bool updateReadingProgress(String title, int newCurrentPage) {
     final index = _booksReading.indexWhere((b) => b.title == title);
-    if (index == -1) return;
+    if (index == -1) return false;
 
     final book = _booksReading[index];
     book.currentPage = newCurrentPage;
+    bool completedNow = false;
 
     // Se ha finito tutte le pagine, spostiamo il libro nei "Letti"!
     if (book.isCompleted) {
       _booksReading.removeAt(index);
       _booksRead.add(book);
       _totalBooksRead++;
+      completedNow = true;
     }
 
     saveState();
     notifyListeners();
+    return completedNow;
   }
   
   // Metodo per formattare i secondi totali in hh:mm o simile

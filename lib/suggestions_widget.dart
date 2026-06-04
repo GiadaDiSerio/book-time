@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'app_state.dart';
+import 'rating_dialog.dart';
 
 enum SuggestionMode { author, genre }
 
@@ -34,18 +35,26 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
     try {
       String query = '';
 
-      // Raccogliamo autori da TUTTE le liste
-      final allBooks = [
-        ...appState.booksRead,
-        ...appState.booksReading,
-        ...appState.booksToRead,
-      ];
-
-      final validAuthors = allBooks
+      // Raccogliamo autori dai libri con voti alti (4 o 5 stelle)
+      List<String> validAuthors = appState.booksRead
+          .where((b) => b.rating >= 4 && b.author != 'Autore sconosciuto')
           .map((b) => b.author)
-          .where((a) => a != 'Autore sconosciuto')
           .toSet()
           .toList();
+
+      // Se non ci sono voti alti, raccogliamo autori da TUTTE le liste come fallback
+      if (validAuthors.isEmpty) {
+        final allBooks = [
+          ...appState.booksRead,
+          ...appState.booksReading,
+          ...appState.booksToRead,
+        ];
+        validAuthors = allBooks
+            .map((b) => b.author)
+            .where((a) => a != 'Autore sconosciuto')
+            .toSet()
+            .toList();
+      }
 
       final subjects = [
         'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
@@ -265,10 +274,12 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                       title: const Text('Aggiungi come "Letto"'),
                       onTap: () {
                         final messenger = ScaffoldMessenger.of(context);
-                        appState.addBookRead(title, author: authors, coverUrl: imageUrl);
                         Navigator.pop(context);
-                        messenger.showSnackBar(const SnackBar(content: Text('Aggiunto a "Letti"')));
-                        setState(() { _suggestions.remove(book); });
+                        showRatingDialog(context, title, (rating) {
+                          appState.addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating);
+                          messenger.showSnackBar(const SnackBar(content: Text('Aggiunto ai "Letti"!')));
+                          setState(() { _suggestions.remove(book); });
+                        });
                       },
                     ),
                     const SizedBox(height: 8),
