@@ -71,7 +71,6 @@ class AppState extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
 
   // --- STATISTICHE ---
-  int _totalBooksRead = 0;
   int _totalReadingSeconds = 0;
 
   // --- LISTE LIBRI ---
@@ -86,7 +85,7 @@ class AppState extends ChangeNotifier {
   String get languageCode => _languageCode;
   ThemeMode get themeMode => _themeMode;
   bool get isFirstLaunch => _userName.isEmpty;
-  int get totalBooksRead => _totalBooksRead;
+  int get totalBooksRead => _booksRead.length;
   int get totalReadingSeconds => _totalReadingSeconds;
   
   List<Book> get booksToRead => List.unmodifiable(_booksToRead);
@@ -119,7 +118,6 @@ class AppState extends ChangeNotifier {
       _themeMode = ThemeMode.system;
     }
 
-    _totalBooksRead = prefs.getInt('totalBooksRead') ?? 0;
     _totalReadingSeconds = prefs.getInt('totalReadingSeconds') ?? 0;
 
     final String? booksToReadJson = prefs.getString('booksToRead');
@@ -156,7 +154,6 @@ class AppState extends ChangeNotifier {
     if (_themeMode == ThemeMode.light) themeStr = 'light';
     if (_themeMode == ThemeMode.dark) themeStr = 'dark';
     await prefs.setString('themeMode', themeStr);
-    await prefs.setInt('totalBooksRead', _totalBooksRead);
     await prefs.setInt('totalReadingSeconds', _totalReadingSeconds);
 
     await prefs.setString('booksToRead', jsonEncode(_booksToRead.map((b) => b.toJson()).toList()));
@@ -238,7 +235,6 @@ class AppState extends ChangeNotifier {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
     _booksRead.add(Book(title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
-    _totalBooksRead++; // Incrementa la statistica!
     saveState();
     notifyListeners();
   }
@@ -273,7 +269,6 @@ class AppState extends ChangeNotifier {
     if (book.isCompleted) {
       _booksReading.removeAt(index);
       _booksRead.add(book);
-      _totalBooksRead++;
       completedNow = true;
     }
 
@@ -365,7 +360,6 @@ class AppState extends ChangeNotifier {
         coverUrl: book.coverUrl,
         rating: rating,
       ));
-      _totalBooksRead++;
       saveState();
       notifyListeners();
     }
