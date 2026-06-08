@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
+import 'book_utils.dart';
 import 'search_page.dart';
 import 'timer_page.dart';
 import 'app_state.dart';
@@ -296,37 +296,6 @@ class _HomePageState extends State<HomePage> {
   // ============================================
   // DETTAGLIO LIBRO — Bottom sheet con trama
   // ============================================
-  Future<String> _fetchBookPlot(String title, String author) async {
-    try {
-      final searchResponse = await http.get(Uri.parse(
-        'https://openlibrary.org/search.json?title=${Uri.encodeComponent(title)}&limit=1',
-      ));
-      if (searchResponse.statusCode == 200) {
-        final data = json.decode(searchResponse.body);
-        final docs = data['docs'] as List? ?? [];
-        if (docs.isNotEmpty && docs[0]['key'] != null) {
-          final bookKey = docs[0]['key'];
-          final descResponse = await http.get(
-            Uri.parse('https://openlibrary.org$bookKey.json'),
-          );
-          if (descResponse.statusCode == 200) {
-            final descData = json.decode(descResponse.body);
-            if (descData['description'] != null) {
-              if (descData['description'] is String) {
-                return descData['description'];
-              } else if (descData['description'] is Map &&
-                  descData['description']['value'] != null) {
-                return descData['description']['value'];
-              }
-            }
-          }
-        }
-      }
-      return 'Nessuna trama disponibile.';
-    } catch (e) {
-      return 'Errore nel caricamento della trama.';
-    }
-  }
 
   void _showBookDetailSheet(Book book) {
     showModalBottomSheet(
@@ -343,7 +312,7 @@ class _HomePageState extends State<HomePage> {
           builder: (ctx, setStateSheet) {
             if (!hasFetched) {
               hasFetched = true;
-              _fetchBookPlot(book.title, book.author).then((fetchedPlot) {
+              fetchBookPlot(book.title, book.author).then((fetchedPlot) {
                 if (mounted) {
                   setStateSheet(() {
                     plot = fetchedPlot;
@@ -367,7 +336,7 @@ class _HomePageState extends State<HomePage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.grey[300],
+                          color: Theme.of(ctx).colorScheme.outlineVariant,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -384,7 +353,7 @@ class _HomePageState extends State<HomePage> {
                               height: 200,
                               width: 130,
                               decoration: BoxDecoration(
-                                color: Colors.grey[200],
+                                color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(Icons.book, size: 60, color: Colors.grey),
@@ -396,7 +365,7 @@ class _HomePageState extends State<HomePage> {
                           height: 200,
                           width: 130,
                           decoration: BoxDecoration(
-                            color: Colors.grey[200],
+                            color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.book, size: 60, color: Colors.grey),
@@ -435,7 +404,7 @@ class _HomePageState extends State<HomePage> {
                               Expanded(
                                 child: LinearProgressIndicator(
                                   value: book.progress,
-                                  backgroundColor: Colors.grey[200],
+                                  backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHighest,
                                   color: const Color(0xFF7B1FA2),
                                   minHeight: 8,
                                   borderRadius: BorderRadius.circular(4),
@@ -468,10 +437,8 @@ class _HomePageState extends State<HomePage> {
                                 size: 40,
                               ),
                               onPressed: () {
-                                setStateSheet(() {
-                                  book.rating = index + 1;
-                                });
                                 appState.rateBook(book.title, index + 1);
+                                setStateSheet(() {});
                               },
                             );
                           }),
@@ -710,15 +677,15 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3E5F5),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$count',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF7B1FA2),
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
                 ),
               ),
             ),
@@ -789,7 +756,7 @@ class _HomePageState extends State<HomePage> {
                         height: 150,
                         width: 120,
                         decoration: BoxDecoration(
-                          color: Colors.grey[200],
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.book, color: Colors.grey, size: 40),
@@ -799,7 +766,7 @@ class _HomePageState extends State<HomePage> {
                       height: 150,
                       width: 120,
                       decoration: BoxDecoration(
-                        color: Colors.grey[200],
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(Icons.book, color: Colors.grey, size: 40),
@@ -818,7 +785,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 4),
               LinearProgressIndicator(
                 value: book.progress,
-                backgroundColor: Colors.grey[200],
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 color: const Color(0xFF7B1FA2),
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(2),
@@ -887,7 +854,7 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3E5F5),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -905,7 +872,7 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(fontSize: 14, color: Colors.black87),
+            style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
             textAlign: TextAlign.center,
           ),
         ],

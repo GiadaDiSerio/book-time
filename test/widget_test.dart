@@ -6,11 +6,15 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:book_time/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
+    // Inizializza SharedPreferences con valori vuoti per il test
+    SharedPreferences.setMockInitialValues({});
+
     // Build our app and trigger a frame.
     await tester.pumpWidget(const BookTimeApp());
 

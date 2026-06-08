@@ -211,24 +211,32 @@ class AppState extends ChangeNotifier {
     notifyListeners(); // Avvisa l'interfaccia di aggiornarsi
   }
 
+  // Controlla se un libro è già presente in una qualsiasi lista
+  bool _isBookInAnyList(String title) {
+    return _booksToRead.any((b) => b.title == title) ||
+           _booksReading.any((b) => b.title == title) ||
+           _booksRead.any((b) => b.title == title);
+  }
+
   void addBookToRead(String title, {String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl}) {
     // Controlliamo che non sia già presente in nessuna lista
-    if (_booksToRead.any((b) => b.title == title)) return;
+    if (_isBookInAnyList(title)) return;
     _booksToRead.add(Book(title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
     saveState();
     notifyListeners();
   }
 
   void addBookReading(String title, {String author = 'Autore sconosciuto', required int totalPages, String? coverUrl}) {
-    // Controlliamo che non sia già presente
-    if (_booksReading.any((b) => b.title == title)) return;
+    // Controlliamo che non sia già presente in nessuna lista
+    if (_isBookInAnyList(title)) return;
     _booksReading.add(Book(title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
     saveState();
     notifyListeners();
   }
 
   void addBookRead(String title, {String author = 'Autore sconosciuto', String? coverUrl, int rating = 0}) {
-    if (_booksRead.any((b) => b.title == title)) return;
+    // Controlliamo che non sia già presente in nessuna lista
+    if (_isBookInAnyList(title)) return;
     _booksRead.add(Book(title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
     _totalBooksRead++; // Incrementa la statistica!
     saveState();

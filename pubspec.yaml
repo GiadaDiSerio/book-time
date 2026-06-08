@@ -34,7 +34,6 @@ dependencies:
   
   # I pacchetti per la tua app:
   http: ^1.2.0              # Per chiamare le Google Books API
-  mobile_scanner: ^5.0.0    # Per il Barcode Scanner
   shared_preferences: ^2.5.5
   image_picker: ^1.2.2
 

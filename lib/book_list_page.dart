@@ -1,5 +1,4 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'book_utils.dart';
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
@@ -155,9 +154,9 @@ class _BookListPageState extends State<BookListPage> {
                       width: 80,
                       height: 120,
                       fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, st) => _buildPlaceholderCover(),
+                      errorBuilder: (ctx, err, st) => _buildPlaceholderCover(ctx),
                     )
-                  : _buildPlaceholderCover(),
+                  : _buildPlaceholderCover(context),
             ),
             const SizedBox(width: 16),
             // Dettagli
@@ -189,7 +188,7 @@ class _BookListPageState extends State<BookListPage> {
                         Expanded(
                           child: LinearProgressIndicator(
                             value: book.progress,
-                            backgroundColor: Colors.grey[200],
+                            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                             color: const Color(0xFF7B1FA2),
                             minHeight: 8,
                             borderRadius: BorderRadius.circular(4),
@@ -274,7 +273,7 @@ class _BookListPageState extends State<BookListPage> {
           builder: (context, setStateSheet) {
             if (!hasFetched) {
               hasFetched = true;
-              _fetchBookPlot(book.title, book.author).then((fetchedPlot) {
+              fetchBookPlot(book.title, book.author).then((fetchedPlot) {
                 if (mounted) {
                   setStateSheet(() {
                     plot = fetchedPlot;
@@ -301,9 +300,9 @@ class _BookListPageState extends State<BookListPage> {
                                 width: 120,
                                 height: 180,
                                 fit: BoxFit.cover,
-                                errorBuilder: (ctx, err, st) => _buildPlaceholderCover(large: true),
+                                errorBuilder: (ctx, err, st) => _buildPlaceholderCover(ctx, large: true),
                               )
-                            : _buildPlaceholderCover(large: true),
+                            : _buildPlaceholderCover(context, large: true),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -342,10 +341,8 @@ class _BookListPageState extends State<BookListPage> {
                               size: 40,
                             ),
                             onPressed: () {
-                              setStateSheet(() {
-                                book.rating = index + 1;
-                              });
                               appState.rateBook(book.title, index + 1);
+                              setStateSheet(() {});
                             },
                           );
                         }),
@@ -391,44 +388,14 @@ class _BookListPageState extends State<BookListPage> {
     );
   }
 
-  Future<String> _fetchBookPlot(String title, String author) async {
-    try {
-      final searchResponse = await http.get(Uri.parse(
-        'https://openlibrary.org/search.json?title=${Uri.encodeComponent(title)}&limit=1',
-      ));
-      if (searchResponse.statusCode == 200) {
-        final data = json.decode(searchResponse.body);
-        final docs = data['docs'] as List? ?? [];
-        if (docs.isNotEmpty && docs[0]['key'] != null) {
-          final bookKey = docs[0]['key'];
-          final descResponse = await http.get(
-            Uri.parse('https://openlibrary.org$bookKey.json'),
-          );
-          if (descResponse.statusCode == 200) {
-            final descData = json.decode(descResponse.body);
-            if (descData['description'] != null) {
-              if (descData['description'] is String) {
-                return descData['description'];
-              } else if (descData['description'] is Map &&
-                  descData['description']['value'] != null) {
-                return descData['description']['value'];
-              }
-            }
-          }
-        }
-      }
-      return 'Nessuna trama disponibile.';
-    } catch (e) {
-      return 'Errore nel caricamento della trama.';
-    }
-  }
 
-  Widget _buildPlaceholderCover({bool large = false}) {
+
+  Widget _buildPlaceholderCover(BuildContext context, {bool large = false}) {
     return Container(
       width: large ? 120 : 80,
       height: large ? 180 : 120,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: const Icon(Icons.book, size: 40, color: Colors.grey),

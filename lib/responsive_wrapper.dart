@@ -23,24 +23,3 @@ class ResponsiveWrapper extends StatelessWidget {
     );
   }
 }
-
-/// Breakpoints utili per decidere il layout in base alla dimensione dello schermo
-class ScreenSize {
-  static bool isPhone(BuildContext context) =>
-      MediaQuery.of(context).size.width < 600;
-
-  static bool isTablet(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 600 &&
-      MediaQuery.of(context).size.width < 1200;
-
-  static bool isDesktop(BuildContext context) =>
-      MediaQuery.of(context).size.width >= 1200;
-
-  /// Restituisce la larghezza dello schermo
-  static double width(BuildContext context) =>
-      MediaQuery.of(context).size.width;
-
-  /// Restituisce l'altezza dello schermo
-  static double height(BuildContext context) =>
-      MediaQuery.of(context).size.height;
-}
