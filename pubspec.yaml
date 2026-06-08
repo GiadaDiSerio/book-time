@@ -36,6 +36,7 @@ dependencies:
   http: ^1.2.0              # Per chiamare le Google Books API
   shared_preferences: ^2.5.5
   image_picker: ^1.2.2
+  uuid: ^4.5.3
 
 dev_dependencies:
   flutter_test:

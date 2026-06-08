@@ -29,7 +29,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
             });
           }
 
-          final isRead = appState.booksRead.any((b) => b.title == book.title);
+          final isRead = appState.booksRead.any((b) => b.id == book.id);
 
           return SafeArea(
             child: Padding(
@@ -132,7 +132,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                               size: 40,
                             ),
                             onPressed: () {
-                              appState.rateBook(book.title, index + 1);
+                              appState.rateBook(book.id, index + 1);
                               setStateSheet(() {});
                             },
                           );

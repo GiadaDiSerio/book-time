@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 
@@ -10,12 +11,99 @@ class TimerPage extends StatefulWidget {
   State<TimerPage> createState() => _TimerPageState();
 }
 
-class _TimerPageState extends State<TimerPage> {
+class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
   Timer? _timer;
   int _seconds = 0;
   bool _isRunning = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _restoreTimerState();
+  }
+
+  // --- PERSISTENZA DEL TIMER ---
+
+  /// Salva lo stato del timer in SharedPreferences
+  Future<void> _saveTimerState() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_isRunning) {
+      // Se il timer è in esecuzione, salviamo il timestamp di quando è partito
+      // sottraendo i secondi già accumulati, così al ripristino possiamo
+      // ricalcolare il tempo trascorso
+      final startTimestamp = DateTime.now().millisecondsSinceEpoch - (_seconds * 1000);
+      await prefs.setInt('timerStartTimestamp', startTimestamp);
+      await prefs.setBool('timerWasRunning', true);
+    } else if (_seconds > 0) {
+      // Timer in pausa con dei secondi accumulati
+      await prefs.setInt('timerPausedSeconds', _seconds);
+      await prefs.setBool('timerWasRunning', false);
+    }
+  }
+
+  /// Ripristina lo stato del timer da SharedPreferences
+  Future<void> _restoreTimerState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final wasRunning = prefs.getBool('timerWasRunning');
+
+    if (wasRunning == null) return; // Nessun timer salvato
+
+    if (wasRunning) {
+      // Il timer era in esecuzione: calcoliamo quanti secondi sono passati
+      final startTimestamp = prefs.getInt('timerStartTimestamp') ?? 0;
+      final elapsedMs = DateTime.now().millisecondsSinceEpoch - startTimestamp;
+      final restoredSeconds = (elapsedMs / 1000).floor();
+
+      setState(() {
+        _seconds = restoredSeconds;
+      });
+
+      // Riavviamo il timer automaticamente
+      _startTimer();
+    } else {
+      // Il timer era in pausa
+      final pausedSeconds = prefs.getInt('timerPausedSeconds') ?? 0;
+      if (pausedSeconds > 0) {
+        setState(() {
+          _seconds = pausedSeconds;
+        });
+      }
+    }
+
+    // Puliamo i dati salvati (verranno risalvati se necessario)
+    await _clearSavedTimerState();
+  }
+
+  /// Rimuove i dati del timer salvati
+  Future<void> _clearSavedTimerState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('timerStartTimestamp');
+    await prefs.remove('timerWasRunning');
+    await prefs.remove('timerPausedSeconds');
+  }
+
+  /// Intercetta i cambiamenti del ciclo di vita dell'app
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached ||
+        state == AppLifecycleState.inactive) {
+      // L'app sta andando in background o viene chiusa
+      if (_seconds > 0) {
+        _saveTimerState();
+      }
+    } else if (state == AppLifecycleState.resumed) {
+      // L'app torna in primo piano: se il timer era in esecuzione,
+      // ricalcoliamo i secondi trascorsi
+      _restoreTimerState();
+    }
+  }
+
+  // --- LOGICA DEL TIMER ---
+
   void _startTimer() {
+    _timer?.cancel(); // Evitiamo timer multipli
     setState(() {
       _isRunning = true;
     });
@@ -31,10 +119,17 @@ class _TimerPageState extends State<TimerPage> {
       _isRunning = false;
     });
     _timer?.cancel();
+    // Salviamo lo stato in pausa
+    if (_seconds > 0) {
+      _saveTimerState();
+    }
   }
 
   void _stopTimer() {
     _pauseTimer();
+    
+    // Puliamo i dati salvati poiché la sessione è conclusa
+    _clearSavedTimerState();
     
     // Aggiungiamo il tempo alle statistiche globali!
     appState.addReadingTime(_seconds);
@@ -198,6 +293,11 @@ class _TimerPageState extends State<TimerPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // Se il timer è ancora attivo quando la pagina viene distrutta, salviamo
+    if (_seconds > 0) {
+      _saveTimerState();
+    }
     _timer?.cancel();
     super.dispose();
   }

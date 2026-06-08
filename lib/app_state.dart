@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 class Book {
+  final String id; // Identificatore univoco del libro
   final String title;
   final String author;
   final int totalPages;
@@ -12,13 +14,14 @@ class Book {
   int rating;
 
   Book({
+    String? id,
     required this.title,
     this.author = 'Autore sconosciuto',
     required this.totalPages,
     this.currentPage = 0,
     this.coverUrl,
     this.rating = 0,
-  });
+  }) : id = id ?? const Uuid().v4();
 
   // Percentuale di completamento (da 0.0 a 1.0)
   double get progress => totalPages > 0 ? currentPage / totalPages : 0.0;
@@ -29,6 +32,7 @@ class Book {
   // Per salvare i dati in memoria
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'title': title,
       'author': author,
       'totalPages': totalPages,
@@ -41,6 +45,7 @@ class Book {
   // Per caricare i dati dalla memoria
   factory Book.fromJson(Map<String, dynamic> json) {
     return Book(
+      id: json['id'], // Se manca (dati vecchi), ne genera uno nuovo automaticamente
       title: json['title'],
       author: json['author'] ?? 'Autore sconosciuto',
       totalPages: json['totalPages'] ?? 0,
@@ -208,46 +213,46 @@ class AppState extends ChangeNotifier {
     notifyListeners(); // Avvisa l'interfaccia di aggiornarsi
   }
 
-  // Controlla se un libro è già presente in una qualsiasi lista
+  // Controlla se un libro è già presente in una qualsiasi lista (per titolo, usato solo all'aggiunta)
   bool _isBookInAnyList(String title) {
     return _booksToRead.any((b) => b.title == title) ||
            _booksReading.any((b) => b.title == title) ||
            _booksRead.any((b) => b.title == title);
   }
 
-  void addBookToRead(String title, {String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl}) {
+  void addBookToRead(String title, {String? id, String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksToRead.add(Book(title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
+    _booksToRead.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
     saveState();
     notifyListeners();
   }
 
-  void addBookReading(String title, {String author = 'Autore sconosciuto', required int totalPages, String? coverUrl}) {
+  void addBookReading(String title, {String? id, String author = 'Autore sconosciuto', required int totalPages, String? coverUrl}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksReading.add(Book(title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
+    _booksReading.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
     saveState();
     notifyListeners();
   }
 
-  void addBookRead(String title, {String author = 'Autore sconosciuto', String? coverUrl, int rating = 0}) {
+  void addBookRead(String title, {String? id, String author = 'Autore sconosciuto', String? coverUrl, int rating = 0}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksRead.add(Book(title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
+    _booksRead.add(Book(id: id, title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
     saveState();
     notifyListeners();
   }
 
-  void rateBook(String title, int rating) {
-    final index = _booksRead.indexWhere((b) => b.title == title);
+  void rateBook(String bookId, int rating) {
+    final index = _booksRead.indexWhere((b) => b.id == bookId);
     if (index != -1) {
       _booksRead[index].rating = rating;
       saveState();
       notifyListeners();
       return;
     }
-    final readingIndex = _booksReading.indexWhere((b) => b.title == title);
+    final readingIndex = _booksReading.indexWhere((b) => b.id == bookId);
     if (readingIndex != -1) {
       _booksReading[readingIndex].rating = rating;
       saveState();
@@ -257,8 +262,8 @@ class AppState extends ChangeNotifier {
   }
 
   // Aggiorna il progresso di lettura di un libro "In lettura"
-  bool updateReadingProgress(String title, int newCurrentPage) {
-    final index = _booksReading.indexWhere((b) => b.title == title);
+  bool updateReadingProgress(String bookId, int newCurrentPage) {
+    final index = _booksReading.indexWhere((b) => b.id == bookId);
     if (index == -1) return false;
 
     final book = _booksReading[index];
@@ -292,10 +297,10 @@ class AppState extends ChangeNotifier {
   // --- ELIMINAZIONE LIBRI ---
 
   /// Rimuove un libro da qualsiasi lista in cui si trova
-  void removeBook(String title) {
-    _booksToRead.removeWhere((b) => b.title == title);
-    _booksReading.removeWhere((b) => b.title == title);
-    _booksRead.removeWhere((b) => b.title == title);
+  void removeBook(String bookId) {
+    _booksToRead.removeWhere((b) => b.id == bookId);
+    _booksReading.removeWhere((b) => b.id == bookId);
+    _booksRead.removeWhere((b) => b.id == bookId);
     saveState();
     notifyListeners();
   }
@@ -303,26 +308,27 @@ class AppState extends ChangeNotifier {
   // --- SPOSTAMENTO LIBRI TRA LISTE ---
 
   /// Helper: trova un libro in qualsiasi lista, lo rimuove e lo restituisce
-  Book? _findAndRemoveBook(String title) {
+  Book? _findAndRemoveBook(String bookId) {
     int index;
 
-    index = _booksToRead.indexWhere((b) => b.title == title);
+    index = _booksToRead.indexWhere((b) => b.id == bookId);
     if (index != -1) return _booksToRead.removeAt(index);
 
-    index = _booksReading.indexWhere((b) => b.title == title);
+    index = _booksReading.indexWhere((b) => b.id == bookId);
     if (index != -1) return _booksReading.removeAt(index);
 
-    index = _booksRead.indexWhere((b) => b.title == title);
+    index = _booksRead.indexWhere((b) => b.id == bookId);
     if (index != -1) return _booksRead.removeAt(index);
 
     return null;
   }
 
   /// Sposta un libro nella lista "Da leggere"
-  void moveBookToToRead(String title) {
-    final book = _findAndRemoveBook(title);
+  void moveBookToToRead(String bookId) {
+    final book = _findAndRemoveBook(bookId);
     if (book != null) {
       _booksToRead.add(Book(
+        id: book.id,
         title: book.title,
         author: book.author,
         totalPages: book.totalPages,
@@ -334,10 +340,11 @@ class AppState extends ChangeNotifier {
   }
 
   /// Sposta un libro nella lista "In lettura" (richiede il numero di pagine)
-  void moveBookToReading(String title, int totalPages) {
-    final book = _findAndRemoveBook(title);
+  void moveBookToReading(String bookId, int totalPages) {
+    final book = _findAndRemoveBook(bookId);
     if (book != null) {
       _booksReading.add(Book(
+        id: book.id,
         title: book.title,
         author: book.author,
         totalPages: totalPages,
@@ -349,10 +356,11 @@ class AppState extends ChangeNotifier {
   }
 
   /// Sposta un libro nella lista "Letti"
-  void moveBookToRead(String title, {int rating = 0}) {
-    final book = _findAndRemoveBook(title);
+  void moveBookToRead(String bookId, {int rating = 0}) {
+    final book = _findAndRemoveBook(bookId);
     if (book != null) {
       _booksRead.add(Book(
+        id: book.id,
         title: book.title,
         author: book.author,
         totalPages: book.totalPages,
