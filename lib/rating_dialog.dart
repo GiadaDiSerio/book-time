@@ -49,7 +49,7 @@ Future<void> showRatingDialog(BuildContext context, String title, Function(int) 
                 Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF7B1FA2),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('CONFERMA'),

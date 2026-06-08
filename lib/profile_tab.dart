@@ -42,7 +42,7 @@ class ProfileTab extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: const Color(0xFF7B1FA2),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         backgroundImage: appState.profileImageBase64.isNotEmpty
                             ? MemoryImage(base64Decode(appState.profileImageBase64))
                             : null,
@@ -223,7 +223,7 @@ class ProfileTab extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundColor: const Color(0xFF7B1FA2),
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             backgroundImage: hasImage 
                                 ? MemoryImage(base64Decode(appState.profileImageBase64))
                                 : null,
@@ -237,7 +237,7 @@ class ProfileTab extends StatelessWidget {
                               color: Colors.white,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.add_a_photo, size: 18, color: Color(0xFF7B1FA2)),
+                            child: Icon(Icons.add_a_photo, size: 18, color: Theme.of(context).colorScheme.primary),
                           ),
                         ],
                       ),
@@ -277,7 +277,7 @@ class ProfileTab extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7B1FA2),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('SALVA'),
@@ -300,10 +300,10 @@ class ProfileTab extends StatelessWidget {
           children: [
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF7B1FA2),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 8),
@@ -324,10 +324,10 @@ class ProfileTab extends StatelessWidget {
             ),
             const Spacer(),
             if (onTap != null)
-              const Icon(
+              Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: Color(0xFF7B1FA2),
+                color: Theme.of(context).colorScheme.primary,
               ),
           ],
         ),
@@ -348,7 +348,7 @@ class ProfileTab extends StatelessWidget {
         child: Text(
           emptyMessage,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
+          style: TextStyle(fontSize: 14, color: Colors.grey),
         ),
       );
     }
@@ -412,7 +412,7 @@ class ProfileTab extends StatelessWidget {
               book.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
             // Barra progresso (solo per "In lettura")
             if (showProgress) ...[
@@ -420,13 +420,13 @@ class ProfileTab extends StatelessWidget {
               LinearProgressIndicator(
                 value: book.progress,
                 backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                color: const Color(0xFF7B1FA2),
+                color: Theme.of(context).colorScheme.primary,
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(2),
               ),
               Text(
                 '${(book.progress * 100).toInt()}%',
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                style: TextStyle(fontSize: 10, color: Colors.grey),
               ),
             ],
           ],
@@ -445,14 +445,14 @@ class ProfileTab extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(icon, color: const Color(0xFF7B1FA2), size: 30),
+          Icon(icon, color: Theme.of(context).colorScheme.primary, size: 30),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF7B1FA2),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 4),

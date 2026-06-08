@@ -129,10 +129,10 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Text(
             _suggestionReason,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF7B1FA2),
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
@@ -189,7 +189,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                         title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),

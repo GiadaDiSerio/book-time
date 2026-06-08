@@ -57,7 +57,7 @@ class _TimerPageState extends State<TimerPage> {
                 _seconds = 0;
               });
             },
-            child: const Text('COMPLETA', style: TextStyle(color: Color(0xFF7B1FA2), fontWeight: FontWeight.bold)),
+            child: Text('COMPLETA', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -186,7 +186,7 @@ class _TimerPageState extends State<TimerPage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B1FA2),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('AGGIUNGI'),
@@ -219,7 +219,7 @@ class _TimerPageState extends State<TimerPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.timer, size: iconSize, color: const Color(0xFF7B1FA2)),
+                    Icon(Icons.timer, size: iconSize, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(height: 24),
                     // Il cronometro
                     Text(
@@ -240,7 +240,7 @@ class _TimerPageState extends State<TimerPage> {
                         FloatingActionButton.large(
                           heroTag: 'play_pause',
                           onPressed: _isRunning ? _pauseTimer : _startTimer,
-                          backgroundColor: const Color(0xFF7B1FA2),
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           foregroundColor: Colors.white,
                           child: Icon(_isRunning ? Icons.pause : Icons.play_arrow),
                         ),
@@ -261,11 +261,11 @@ class _TimerPageState extends State<TimerPage> {
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: _showManualTimeDialog,
-                      icon: const Icon(Icons.edit_calendar, color: Color(0xFF7B1FA2)),
-                      label: const Text(
+                      icon: Icon(Icons.edit_calendar, color: Theme.of(context).colorScheme.primary),
+                      label: Text(
                         'Hai dimenticato il timer?\nAggiungi tempo manualmente',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF7B1FA2)),
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary),
                       ),
                     ),
                   ],

@@ -89,7 +89,7 @@ class _BookListPageState extends State<BookListPage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B1FA2),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('SALVA'),
@@ -167,7 +167,7 @@ class _BookListPageState extends State<BookListPage> {
                 children: [
                   Text(
                     book.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -175,7 +175,7 @@ class _BookListPageState extends State<BookListPage> {
                   const SizedBox(height: 4),
                   Text(
                     book.author,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
                       fontStyle: FontStyle.italic,
@@ -190,7 +190,7 @@ class _BookListPageState extends State<BookListPage> {
                           child: LinearProgressIndicator(
                             value: book.progress,
                             backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                            color: const Color(0xFF7B1FA2),
+                            color: Theme.of(context).colorScheme.primary,
                             minHeight: 8,
                             borderRadius: BorderRadius.circular(4),
                           ),
@@ -198,7 +198,7 @@ class _BookListPageState extends State<BookListPage> {
                         const SizedBox(width: 12),
                         Text(
                           '${book.currentPage}/${book.totalPages}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -210,7 +210,7 @@ class _BookListPageState extends State<BookListPage> {
                         icon: const Icon(Icons.edit, size: 18),
                         label: const Text('Aggiorna progresso'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF7B1FA2),
+                          foregroundColor: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -297,10 +297,10 @@ class _BookListPageState extends State<BookListPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Text(
                   book.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF7B1FA2),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -311,7 +311,7 @@ class _BookListPageState extends State<BookListPage> {
 
               if (widget.category != BookCategory.toRead)
                 ListTile(
-                  leading: const Icon(Icons.bookmark_border, color: Color(0xFF7B1FA2)),
+                  leading: Icon(Icons.bookmark_border, color: Theme.of(context).colorScheme.primary),
                   title: const Text('Sposta in "Da leggere"'),
                   onTap: () {
                     Navigator.pop(sheetContext);
@@ -409,7 +409,7 @@ class _BookListPageState extends State<BookListPage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF7B1FA2),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('SPOSTA'),
@@ -432,9 +432,12 @@ class _BookListPageState extends State<BookListPage> {
 
     appState.removeBook(book.title);
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars(); // Rimuove eventuali snackbar precedenti
+    messenger.showSnackBar(
       SnackBar(
         content: Text('🗑️ "$savedTitle" eliminato'),
+        behavior: SnackBarBehavior.floating, // Permette di scorrere per eliminarla facilmente
         action: SnackBarAction(
           label: 'ANNULLA',
           textColor: Colors.amber,
@@ -472,9 +475,15 @@ class _BookListPageState extends State<BookListPage> {
             }
           },
         ),
-        duration: const Duration(seconds: 4),
       ),
     );
+
+    // Forza la chiusura dopo 3 secondi (ignora le impostazioni di accessibilità di Android)
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        messenger.hideCurrentSnackBar();
+      }
+    });
   }
 
 

@@ -71,10 +71,10 @@ void showBookDetailSheet(BuildContext context, Book book) {
                       child: Text(
                         book.title,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF7B1FA2),
+                          color: Theme.of(ctx).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -82,7 +82,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                     // Autore
                     Text(
                       book.author,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontStyle: FontStyle.italic,
                         color: Colors.grey,
@@ -99,7 +99,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                               child: LinearProgressIndicator(
                                 value: book.progress,
                                 backgroundColor: Theme.of(ctx).colorScheme.surfaceContainerHighest,
-                                color: const Color(0xFF7B1FA2),
+                                color: Theme.of(ctx).colorScheme.primary,
                                 minHeight: 8,
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -107,7 +107,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                             const SizedBox(width: 12),
                             Text(
                               '${book.currentPage}/${book.totalPages}',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -147,12 +147,12 @@ void showBookDetailSheet(BuildContext context, Book book) {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Trama',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF7B1FA2),
+                              color: Theme.of(ctx).colorScheme.primary,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -161,7 +161,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                             child: SingleChildScrollView(
                               child: Text(
                                 plot,
-                                style: const TextStyle(fontSize: 14),
+                                style: TextStyle(fontSize: 14),
                                 textAlign: TextAlign.justify,
                               ),
                             ),

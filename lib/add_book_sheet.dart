@@ -48,10 +48,10 @@ void showAddBookSheet(
                     padding: const EdgeInsets.all(16.0),
                     child: Text(
                       'Aggiungi "$title"',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF7B1FA2),
+                        color: Theme.of(ctx).colorScheme.primary,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -79,7 +79,7 @@ void showAddBookSheet(
                   const Divider(),
                   // Opzione: Da leggere
                   ListTile(
-                    leading: const Icon(Icons.bookmark_border, color: Color(0xFF7B1FA2)),
+                    leading: Icon(Icons.bookmark_border, color: Theme.of(ctx).colorScheme.primary),
                     title: const Text('Aggiungi a "Da leggere"'),
                     onTap: () {
                       final messenger = ScaffoldMessenger.of(ctx);
@@ -126,7 +126,7 @@ void showAddBookSheet(
                                   onBookAdded?.call();
                                 }
                               },
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7B1FA2), foregroundColor: Colors.white),
+                              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.primary, foregroundColor: Colors.white),
                               child: const Text('AGGIUNGI'),
                             ),
                           ],
