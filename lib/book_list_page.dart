@@ -140,6 +140,7 @@ class _BookListPageState extends State<BookListPage> {
             _showBookDetails(book);
           }
         },
+        onLongPress: () => _showBookActionsSheet(book),
         child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -248,12 +249,230 @@ class _BookListPageState extends State<BookListPage> {
                       ),
                     ),
                   ],
+                  // Suggerimento per il long press
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tieni premuto per opzioni',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[400],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  // ============================================
+  // Bottom sheet con azioni: Sposta / Elimina
+  // ============================================
+  void _showBookActionsSheet(Book book) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(sheetContext).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  book.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7B1FA2),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 1),
+
+              // --- Opzioni di spostamento (mostra solo le liste diverse dalla corrente) ---
+
+              if (widget.category != BookCategory.toRead)
+                ListTile(
+                  leading: const Icon(Icons.bookmark_border, color: Color(0xFF7B1FA2)),
+                  title: const Text('Sposta in "Da leggere"'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    appState.moveBookToToRead(book.title);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('📚 "${book.title}" spostato in "Da leggere"'),
+                      ),
+                    );
+                  },
+                ),
+
+              if (widget.category != BookCategory.reading)
+                ListTile(
+                  leading: const Icon(Icons.menu_book, color: Colors.blue),
+                  title: const Text('Sposta in "In lettura"'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showMoveToReadingDialog(book);
+                  },
+                ),
+
+              if (widget.category != BookCategory.read)
+                ListTile(
+                  leading: const Icon(Icons.check_circle_outline, color: Colors.green),
+                  title: const Text('Sposta in "Letti"'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    showRatingDialog(context, book.title, (rating) {
+                      appState.moveBookToRead(book.title, rating: rating);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✅ "${book.title}" spostato in "Letti"'),
+                        ),
+                      );
+                    });
+                  },
+                ),
+
+              const Divider(height: 1),
+
+              // --- Elimina ---
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Elimina libro', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmDelete(book);
+                },
+              ),
+
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialog per chiedere il numero di pagine quando si sposta in "In lettura"
+  void _showMoveToReadingDialog(Book book) {
+    final pagesController = TextEditingController(
+      text: book.totalPages > 0 ? '${book.totalPages}' : '',
+    );
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Quante pagine ha il libro?'),
+        content: TextField(
+          controller: pagesController,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: 'Numero di pagine',
+            hintText: 'Es: 350',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('ANNULLA'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final pages = int.tryParse(pagesController.text);
+              if (pages != null && pages > 0) {
+                appState.moveBookToReading(book.title, pages);
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('📖 "${book.title}" spostato in "In lettura"'),
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7B1FA2),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('SPOSTA'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Conferma eliminazione con SnackBar e possibilità di annullare
+  void _confirmDelete(Book book) {
+    // Salva i dati del libro per un eventuale undo
+    final savedTitle = book.title;
+    final savedAuthor = book.author;
+    final savedPages = book.totalPages;
+    final savedCurrentPage = book.currentPage;
+    final savedCoverUrl = book.coverUrl;
+    final savedRating = book.rating;
+    final savedCategory = widget.category;
+
+    appState.removeBook(book.title);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('🗑️ "$savedTitle" eliminato'),
+        action: SnackBarAction(
+          label: 'ANNULLA',
+          textColor: Colors.amber,
+          onPressed: () {
+            // Ripristina il libro nella lista originale
+            switch (savedCategory) {
+              case BookCategory.toRead:
+                appState.addBookToRead(
+                  savedTitle,
+                  author: savedAuthor,
+                  totalPages: savedPages,
+                  coverUrl: savedCoverUrl,
+                );
+                break;
+              case BookCategory.reading:
+                appState.addBookReading(
+                  savedTitle,
+                  author: savedAuthor,
+                  totalPages: savedPages,
+                  coverUrl: savedCoverUrl,
+                );
+                // Ripristina anche il progresso
+                if (savedCurrentPage > 0) {
+                  appState.updateReadingProgress(savedTitle, savedCurrentPage);
+                }
+                break;
+              case BookCategory.read:
+                appState.addBookRead(
+                  savedTitle,
+                  author: savedAuthor,
+                  coverUrl: savedCoverUrl,
+                  rating: savedRating,
+                );
+                break;
+            }
+          },
+        ),
+        duration: const Duration(seconds: 4),
       ),
     );
   }

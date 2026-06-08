@@ -293,6 +293,83 @@ class AppState extends ChangeNotifier {
       return '${minutes}m';
     }
   }
+
+  // --- ELIMINAZIONE LIBRI ---
+
+  /// Rimuove un libro da qualsiasi lista in cui si trova
+  void removeBook(String title) {
+    _booksToRead.removeWhere((b) => b.title == title);
+    _booksReading.removeWhere((b) => b.title == title);
+    _booksRead.removeWhere((b) => b.title == title);
+    saveState();
+    notifyListeners();
+  }
+
+  // --- SPOSTAMENTO LIBRI TRA LISTE ---
+
+  /// Helper: trova un libro in qualsiasi lista, lo rimuove e lo restituisce
+  Book? _findAndRemoveBook(String title) {
+    int index;
+
+    index = _booksToRead.indexWhere((b) => b.title == title);
+    if (index != -1) return _booksToRead.removeAt(index);
+
+    index = _booksReading.indexWhere((b) => b.title == title);
+    if (index != -1) return _booksReading.removeAt(index);
+
+    index = _booksRead.indexWhere((b) => b.title == title);
+    if (index != -1) return _booksRead.removeAt(index);
+
+    return null;
+  }
+
+  /// Sposta un libro nella lista "Da leggere"
+  void moveBookToToRead(String title) {
+    final book = _findAndRemoveBook(title);
+    if (book != null) {
+      _booksToRead.add(Book(
+        title: book.title,
+        author: book.author,
+        totalPages: book.totalPages,
+        coverUrl: book.coverUrl,
+      ));
+      saveState();
+      notifyListeners();
+    }
+  }
+
+  /// Sposta un libro nella lista "In lettura" (richiede il numero di pagine)
+  void moveBookToReading(String title, int totalPages) {
+    final book = _findAndRemoveBook(title);
+    if (book != null) {
+      _booksReading.add(Book(
+        title: book.title,
+        author: book.author,
+        totalPages: totalPages,
+        coverUrl: book.coverUrl,
+      ));
+      saveState();
+      notifyListeners();
+    }
+  }
+
+  /// Sposta un libro nella lista "Letti"
+  void moveBookToRead(String title, {int rating = 0}) {
+    final book = _findAndRemoveBook(title);
+    if (book != null) {
+      _booksRead.add(Book(
+        title: book.title,
+        author: book.author,
+        totalPages: book.totalPages,
+        currentPage: book.totalPages,
+        coverUrl: book.coverUrl,
+        rating: rating,
+      ));
+      _totalBooksRead++;
+      saveState();
+      notifyListeners();
+    }
+  }
 }
 
 // Creiamo un'istanza accessibile a tutti
