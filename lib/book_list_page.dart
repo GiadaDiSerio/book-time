@@ -1,4 +1,4 @@
-import 'book_utils.dart';
+import 'book_detail_sheet.dart';
 import 'package:flutter/material.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
@@ -137,7 +137,7 @@ class _BookListPageState extends State<BookListPage> {
       child: InkWell(
         onTap: () {
           if (widget.category == BookCategory.read) {
-            _showBookDetails(book);
+            showBookDetailSheet(context, book);
           }
         },
         onLongPress: () => _showBookActionsSheet(book),
@@ -476,137 +476,6 @@ class _BookListPageState extends State<BookListPage> {
       ),
     );
   }
-
-  void _showBookDetails(Book book) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        String plot = 'Caricamento trama...';
-        bool hasFetched = false;
-
-        return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            if (!hasFetched) {
-              hasFetched = true;
-              fetchBookPlot(book.title, book.author).then((fetchedPlot) {
-                if (mounted) {
-                  setStateSheet(() {
-                    plot = fetchedPlot;
-                  });
-                }
-              });
-            }
-
-            return SafeArea(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom,
-                  top: 24, left: 24, right: 24,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: book.coverUrl != null
-                            ? Image.network(
-                                book.coverUrl!,
-                                width: 120,
-                                height: 180,
-                                fit: BoxFit.cover,
-                                errorBuilder: (ctx, err, st) => _buildPlaceholderCover(ctx, large: true),
-                              )
-                            : _buildPlaceholderCover(context, large: true),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        book.title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF7B1FA2),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        book.author,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'La tua recensione',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(5, (index) {
-                          return IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: Icon(
-                              index < book.rating ? Icons.star : Icons.star_border,
-                              color: Colors.amber,
-                              size: 40,
-                            ),
-                            onPressed: () {
-                              appState.rateBook(book.title, index + 1);
-                              setStateSheet(() {});
-                            },
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Trama',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF7B1FA2),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              constraints: const BoxConstraints(maxHeight: 200),
-                              child: SingleChildScrollView(
-                                child: Text(
-                                  plot,
-                                  style: const TextStyle(fontSize: 14),
-                                  textAlign: TextAlign.justify,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }
-        );
-      },
-    );
-  }
-
 
 
   Widget _buildPlaceholderCover(BuildContext context, {bool large = false}) {
