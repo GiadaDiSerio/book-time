@@ -6,7 +6,7 @@ Future<void> showRatingDialog(BuildContext context, String title, Function(int) 
   await showDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(
-      builder: (context, setState) {
+      builder: (dialogCtx, setState) {
         return AlertDialog(
           title: Text('Valuta "$title"', textAlign: TextAlign.center),
           content: Column(
@@ -49,7 +49,7 @@ Future<void> showRatingDialog(BuildContext context, String title, Function(int) 
                 Navigator.pop(ctx);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
+                backgroundColor: Theme.of(dialogCtx).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
               child: const Text('CONFERMA'),

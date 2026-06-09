@@ -30,9 +30,11 @@ void showAddBookSheet(
           if (isLoadingPlot) {
             isLoadingPlot = false;
             fetchBookPlotByKey(bookKey).then((fetchedPlot) {
-              setStateBottomSheet(() {
-                plot = fetchedPlot;
-              });
+              if (ctx.mounted) {
+                setStateBottomSheet(() {
+                  plot = fetchedPlot;
+                });
+              }
             });
           }
 

@@ -7,7 +7,7 @@ void showSettingsDialog(BuildContext context) {
     context: context,
     builder: (dialogContext) {
       return StatefulBuilder(
-        builder: (context, setStateDialog) {
+        builder: (dialogCtx, setStateDialog) {
           return AlertDialog(
             title: const Text('Impostazioni'),
             content: Column(

@@ -138,7 +138,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Sessione conclusa'),
         content: Text(
           'Ottimo lavoro! Hai letto per ${_formatTime(_seconds)}.\n\n(Il tempo è stato aggiunto alle tue statistiche!)'
@@ -146,13 +146,13 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // chiudi alert
+              Navigator.pop(dialogCtx); // chiudi alert
               // Reset del timer (la pagina è inline, non si fa pop)
               setState(() {
                 _seconds = 0;
               });
             },
-            child: Text('COMPLETA', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+            child: Text('COMPLETA', style: TextStyle(color: Theme.of(dialogCtx).colorScheme.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

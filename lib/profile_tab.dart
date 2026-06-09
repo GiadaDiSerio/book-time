@@ -191,7 +191,7 @@ class ProfileTab extends StatelessWidget {
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setStateDialog) {
+          builder: (dialogCtx, setStateDialog) {
             final hasImage = appState.profileImageBase64.isNotEmpty;
             return AlertDialog(
               title: const Text('Modifica Profilo'),
@@ -223,7 +223,7 @@ class ProfileTab extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            backgroundColor: Theme.of(dialogCtx).colorScheme.primary,
                             backgroundImage: hasImage 
                                 ? MemoryImage(base64Decode(appState.profileImageBase64))
                                 : null,
@@ -237,7 +237,7 @@ class ProfileTab extends StatelessWidget {
                               color: Colors.white,
                               shape: BoxShape.circle,
                             ),
-                            child: Icon(Icons.add_a_photo, size: 18, color: Theme.of(context).colorScheme.primary),
+                            child: Icon(Icons.add_a_photo, size: 18, color: Theme.of(dialogCtx).colorScheme.primary),
                           ),
                         ],
                       ),
@@ -277,7 +277,7 @@ class ProfileTab extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    backgroundColor: Theme.of(dialogCtx).colorScheme.primary,
                     foregroundColor: Colors.white,
                   ),
                   child: const Text('SALVA'),

@@ -101,7 +101,7 @@ class _HomePageState extends State<HomePage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(dialogContext).colorScheme.primary,
               foregroundColor: Colors.white,
             ),
             child: const Text('INIZIAMO!'),

@@ -135,11 +135,7 @@ class _BookListPageState extends State<BookListPage> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: InkWell(
-        onTap: () {
-          if (widget.category == BookCategory.read) {
-            showBookDetailSheet(context, book);
-          }
-        },
+        onTap: () => showBookDetailSheet(context, book),
         onLongPress: () => _showBookActionsSheet(book),
         child: Padding(
         padding: const EdgeInsets.all(12),
