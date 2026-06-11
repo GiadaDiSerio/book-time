@@ -39,6 +39,9 @@ class _SearchPageState extends State<SearchPage> {
   // Contatore per forzare il refresh dei suggerimenti
   int _refreshCounter = 0;
 
+  int _selectedCategoryIndex = 0;
+  final List<String> _categories = ['PER TE', 'SCOPRI'];
+
   Future<void> searchBooks(String query) async {
     _debounce?.cancel();
     if (query.isEmpty) return;
@@ -83,12 +86,31 @@ class _SearchPageState extends State<SearchPage> {
               controller: _searchController,
               decoration: InputDecoration(
                 labelText: 'Titolo o Autore',
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    // Quando premo la lente di ingrandimento, avvia la ricerca
-                    searchBooks(_searchController.text);
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24), // Makes it more pill-shaped, often looks better when small
+                ),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _searchController,
+                  builder: (context, value, child) {
+                    if (value.text.isNotEmpty) {
+                      return IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          // Simula un onChanged con stringa vuota per resettare i risultati
+                          if (_debounce?.isActive ?? false) _debounce!.cancel();
+                          setState(() {
+                            _searchResults = [];
+                            _errorMessage = null;
+                            _isLoading = false;
+                          });
+                        },
+                      );
+                    }
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
@@ -111,6 +133,48 @@ class _SearchPageState extends State<SearchPage> {
                 searchBooks(value);
               }, // Avvia anche se premo "Invio" sulla tastiera
             ),
+          ),
+
+          // Sezione Categorie (Pills)
+          SizedBox(
+            height: 48,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: List.generate(_categories.length, (index) {
+                final isSelected = index == _selectedCategoryIndex;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedCategoryIndex = index;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                          ? Theme.of(context).colorScheme.primary 
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text(
+                      _categories[index],
+                      style: TextStyle(
+                        color: isSelected 
+                            ? Theme.of(context).colorScheme.onPrimary 
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
           ),
 
           // La lista dei risultati (o errore o caricamento o suggerimenti)
@@ -157,19 +221,53 @@ class _SearchPageState extends State<SearchPage> {
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  SuggestionsWidget(
-                                    key: ValueKey('author_${appState.languageCode}_$_refreshCounter'),
-                                    mode: SuggestionMode.author,
-                                  ),
-                                  SuggestionsWidget(
-                                    key: ValueKey('genre_${appState.languageCode}_$_refreshCounter'),
-                                    mode: SuggestionMode.genre,
-                                  ),
+                                  if (_selectedCategoryIndex == 0) ...[
+                                    SuggestionsWidget(
+                                      key: ValueKey('author_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.author,
+                                    ),
+                                    SuggestionsWidget(
+                                      key: ValueKey('fav_genre_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      specificGenre: 'favorite',
+                                      showLoadingIndicator: false,
+                                    ),
+                                  ] else if (_selectedCategoryIndex == 1) ...[
+                                    SuggestionsWidget(
+                                      key: ValueKey('scopri1_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      showLoadingIndicator: true,
+                                    ),
+                                    SuggestionsWidget(
+                                      key: ValueKey('gen_thriller_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      specificGenre: 'thriller',
+                                      showLoadingIndicator: false,
+                                    ),
+                                    SuggestionsWidget(
+                                      key: ValueKey('gen_fantasy_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      specificGenre: 'fantasy',
+                                      showLoadingIndicator: false,
+                                    ),
+                                    SuggestionsWidget(
+                                      key: ValueKey('gen_romanzo_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      specificGenre: 'romanzo',
+                                      showLoadingIndicator: false,
+                                    ),
+                                    SuggestionsWidget(
+                                      key: ValueKey('gen_scifi_${appState.languageCode}_$_refreshCounter'),
+                                      mode: SuggestionMode.genre,
+                                      specificGenre: 'fantascienza',
+                                      showLoadingIndicator: false,
+                                    ),
+                                  ],
                                   const SizedBox(height: 16),
                                   const Padding(
                                     padding: EdgeInsets.all(16.0),
                                     child: Text(
-                                      '↓ Scorri in basso per aggiornare i suggerimenti',
+                                      '↓ Trascina verso il basso per aggiornare i suggerimenti',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(fontSize: 12, color: Colors.grey),
                                     ),

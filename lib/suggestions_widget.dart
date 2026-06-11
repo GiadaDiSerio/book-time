@@ -9,8 +9,15 @@ enum SuggestionMode { author, genre }
 
 class SuggestionsWidget extends StatefulWidget {
   final SuggestionMode mode;
+  final String? specificGenre;
+  final bool showLoadingIndicator;
 
-  const SuggestionsWidget({super.key, this.mode = SuggestionMode.author});
+  const SuggestionsWidget({
+    super.key,
+    this.mode = SuggestionMode.author,
+    this.specificGenre,
+    this.showLoadingIndicator = true,
+  });
 
   @override
   State<SuggestionsWidget> createState() => _SuggestionsWidgetState();
@@ -64,6 +71,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
         isAuthorMode: widget.mode == SuggestionMode.author,
         languageCode: appState.languageCode,
         existingBookTitles: allMyBookTitles,
+        specificGenre: widget.specificGenre,
       );
 
       if (mounted) {
@@ -81,10 +89,12 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(24.0),
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return widget.showLoadingIndicator
+          ? const Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : const SizedBox.shrink();
     }
 
     if (_suggestions.isEmpty) {
@@ -106,7 +116,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
           ),
         ),
         SizedBox(
-          height: 200,
+          height: 280,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -133,32 +143,58 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                   },
                 ),
                 child: Container(
-                  width: 120,
-                  margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                  width: 130,
+                  margin: const EdgeInsets.symmetric(horizontal: 6.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrl,
-                          height: 150,
-                          width: 120,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            height: 150,
-                            width: 120,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.book, color: Colors.grey),
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrl,
+                              height: 190,
+                              width: 130,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 190,
+                                width: 130,
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                child: const Icon(Icons.book, color: Colors.grey),
+                              ),
+                            ),
                           ),
-                        ),
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary, 
+                                  width: 1.5
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.add,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 16,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ],
                   ),

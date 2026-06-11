@@ -16,25 +16,6 @@ void showSettingsDialog(BuildContext context) {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Lingua dei risultati:'),
-                const SizedBox(height: 8),
-                DropdownButton<String>(
-                  isExpanded: true,
-                  value: appState.languageCode,
-                  items: const [
-                    DropdownMenuItem(value: 'ita', child: Text('Italiano')),
-                    DropdownMenuItem(value: 'eng', child: Text('English')),
-                    DropdownMenuItem(value: 'spa', child: Text('Español')),
-                    DropdownMenuItem(value: 'fre', child: Text('Français')),
-                    DropdownMenuItem(value: 'ger', child: Text('Deutsch')),
-                  ],
-                  onChanged: (String? newValue) {
-                    if (newValue != null) {
-                      dialogCtx.read<AppState>().setLanguageCode(newValue);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
                 const Text('Tema dell\'app:'),
                 const SizedBox(height: 8),
                 DropdownButton<ThemeMode>(

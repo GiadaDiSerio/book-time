@@ -163,8 +163,8 @@ void showBookDetailSheet(BuildContext context, Book book) {
                             child: SingleChildScrollView(
                               child: Text(
                                 plot,
-                                style: TextStyle(fontSize: 14),
-                                textAlign: TextAlign.justify,
+                                style: const TextStyle(fontSize: 14),
+                                textAlign: TextAlign.left,
                               ),
                             ),
                           ),

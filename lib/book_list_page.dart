@@ -179,6 +179,25 @@ class _BookListPageState extends State<BookListPage> {
                       fontStyle: FontStyle.italic,
                     ),
                   ),
+                  // Bottone per iniziare a leggere (libri da leggere)
+                  if (widget.category == BookCategory.toRead) ...[
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showMoveToReadingDialog(book),
+                        icon: const Icon(Icons.play_arrow, size: 12),
+                        label: const Text('Inizia a leggere', style: TextStyle(fontSize: 10)),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
                   // Progresso per i libri in lettura
                   if (widget.category == BookCategory.reading) ...[
                     const SizedBox(height: 12),
@@ -428,21 +447,22 @@ class _BookListPageState extends State<BookListPage> {
     final savedCoverUrl = book.coverUrl;
     final savedRating = book.rating;
     final savedCategory = widget.category;
+    final appState = context.read<AppState>();
 
-    context.read<AppState>().removeBook(book.id);
+    appState.removeBook(book.id);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars(); // Rimuove eventuali snackbar precedenti
-    messenger.showSnackBar(
+    final controller = messenger.showSnackBar(
       SnackBar(
         content: Text('🗑️ "$savedTitle" eliminato'),
+        duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating, // Permette di scorrere per eliminarla facilmente
         action: SnackBarAction(
           label: 'ANNULLA',
           textColor: Colors.amber,
           onPressed: () {
             // Ripristina il libro nella lista originale con il suo ID originale
-            final appState = context.read<AppState>();
             switch (savedCategory) {
               case BookCategory.toRead:
                 appState.addBookToRead(
@@ -481,11 +501,11 @@ class _BookListPageState extends State<BookListPage> {
       ),
     );
 
-    // Forza la chiusura dopo 3 secondi (ignora le impostazioni di accessibilità di Android)
+    // Forza la chiusura indipendente dal ciclo di vita della pagina (bypass bug Flutter)
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        messenger.hideCurrentSnackBar();
-      }
+      try {
+        controller.close();
+      } catch (_) {}
     });
   }
 

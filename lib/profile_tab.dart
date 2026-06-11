@@ -40,16 +40,7 @@ class ProfileTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: appState.profileImagePath.isNotEmpty
-                            ? FileImage(File(appState.profileImagePath))
-                            : null,
-                        child: appState.profileImagePath.isNotEmpty
-                            ? null
-                            : const Icon(Icons.person, size: 35, color: Colors.white),
-                      ),
+                      _buildSafeAvatar(context, appState, 30, 35),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -178,6 +169,37 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
+  Widget _buildSafeAvatar(BuildContext context, AppState appState, double radius, double iconSize) {
+    final hasImage = appState.profileImagePath.isNotEmpty;
+
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      child: ClipOval(
+        child: hasImage
+            ? Image.file(
+                File(appState.profileImagePath),
+                fit: BoxFit.cover,
+                errorBuilder: (ctx, error, stackTrace) {
+                  // Ripristina l'immagine di default se il file è corrotto o eliminato
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      context.read<AppState>().setProfileImagePath('');
+                    }
+                  });
+                  return Icon(Icons.person, size: iconSize, color: Colors.white);
+                },
+              )
+            : Icon(Icons.person, size: iconSize, color: Colors.white),
+      ),
+    );
+  }
+
+
   // ============================================
   // Dialog modifica profilo (nome + foto)
   // ============================================
@@ -200,39 +222,11 @@ class ProfileTab extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () async {
-                        try {
-                          final XFile? image = await picker.pickImage(
-                            source: ImageSource.gallery,
-                            maxWidth: 300,
-                            maxHeight: 300,
-                            imageQuality: 70,
-                          );
-                          if (image != null) {
-                            final appDir = await getApplicationDocumentsDirectory();
-                            final fileName = 'profile_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                            final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
-                            
-                            dialogCtx.read<AppState>().setProfileImagePath(savedImage.path);
-                            setStateDialog(() {});
-                          }
-                        } catch (e) {
-                          debugPrint("Errore selezione immagine: $e");
-                        }
-                      },
+                      onTap: () => _showProfileImageOptions(dialogCtx, picker, setStateDialog),
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Theme.of(dialogCtx).colorScheme.primary,
-                            backgroundImage: hasImage 
-                                ? FileImage(File(appState.profileImagePath))
-                                : null,
-                            child: hasImage
-                                ? null
-                                : const Icon(Icons.person, size: 40, color: Colors.white),
-                          ),
+                          _buildSafeAvatar(dialogCtx, appState, 40, 40),
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -292,6 +286,58 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
+  void _showProfileImageOptions(BuildContext context, ImagePicker picker, StateSetter setStateDialog) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Scegli dalla galleria'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  try {
+                    final XFile? image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 300,
+                      maxHeight: 300,
+                      imageQuality: 70,
+                    );
+                    if (image != null) {
+                      final appDir = await getApplicationDocumentsDirectory();
+                      final fileName = 'profile_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                      final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
+                      
+                      context.read<AppState>().setProfileImagePath(savedImage.path);
+                      setStateDialog(() {});
+                    }
+                  } catch (e) {
+                    debugPrint("Errore selezione immagine: $e");
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Impossibile caricare l'immagine. Riprova.")),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Rimuovi foto', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  context.read<AppState>().setProfileImagePath('');
+                  setStateDialog(() {});
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
   // Header per le sezioni — tappabile per aprire la pagina dettaglio
   Widget _buildSectionHeader(BuildContext context, String title, int count, {VoidCallback? onTap}) {
     return InkWell(

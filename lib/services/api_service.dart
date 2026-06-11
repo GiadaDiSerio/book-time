@@ -91,6 +91,7 @@ class ApiService {
     required bool isAuthorMode,
     required String languageCode,
     required List<String> existingBookTitles,
+    String? specificGenre,
   }) async {
     String query = '';
     String suggestionReason = '';
@@ -101,7 +102,14 @@ class ApiService {
       'filosofia', 'arte', 'scienza', 'psicologia', 'classici',
     ];
 
-    if (isAuthorMode && validAuthors.isNotEmpty) {
+    if (specificGenre == 'favorite') {
+      final randomSubject = subjects[Random().nextInt(subjects.length)];
+      query = 'subject=${Uri.encodeComponent(randomSubject)}';
+      suggestionReason = 'Siccome ti piace il ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+    } else if (specificGenre != null) {
+      query = 'subject=${Uri.encodeComponent(specificGenre)}';
+      suggestionReason = '${specificGenre[0].toUpperCase()}${specificGenre.substring(1)}';
+    } else if (isAuthorMode && validAuthors.isNotEmpty) {
       final randomAuthor = validAuthors[Random().nextInt(validAuthors.length)];
       final cleanAuthor = randomAuthor.split(',').first.trim();
       query = 'author=${Uri.encodeComponent(cleanAuthor)}';
@@ -109,7 +117,7 @@ class ApiService {
     } else {
       final randomSubject = subjects[Random().nextInt(subjects.length)];
       query = 'subject=${Uri.encodeComponent(randomSubject)}';
-      suggestionReason = 'Esplora: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+      suggestionReason = '${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
     }
 
     final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=15');

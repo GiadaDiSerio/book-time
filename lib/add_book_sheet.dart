@@ -73,8 +73,8 @@ void showAddBookSheet(
                     child: SingleChildScrollView(
                       child: Text(
                         plot,
-                        style: const TextStyle(fontSize: 14),
-                        textAlign: TextAlign.justify,
+                        style: const TextStyle(fontSize: 14, height: 1.5),
+                        textAlign: TextAlign.left,
                       ),
                     ),
                   ),
