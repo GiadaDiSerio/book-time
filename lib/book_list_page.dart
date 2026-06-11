@@ -7,6 +7,8 @@ import 'rating_dialog.dart';
 
 enum BookCategory { reading, toRead, read }
 
+enum SortOption { none, alphabeticalAZ, alphabeticalZA, ratingHighest }
+
 class BookListPage extends StatefulWidget {
   final BookCategory category;
 
@@ -17,6 +19,9 @@ class BookListPage extends StatefulWidget {
 }
 
 class _BookListPageState extends State<BookListPage> {
+  SortOption _currentSort = SortOption.none;
+  bool _isGridView = false;
+
   String get _title {
     switch (widget.category) {
       case BookCategory.reading:
@@ -29,14 +34,28 @@ class _BookListPageState extends State<BookListPage> {
   }
 
   List<Book> _getBooks(AppState appState) {
+    List<Book> books;
     switch (widget.category) {
       case BookCategory.reading:
-        return appState.booksReading;
+        books = List.from(appState.booksReading);
+        break;
       case BookCategory.toRead:
-        return appState.booksToRead;
+        books = List.from(appState.booksToRead);
+        break;
       case BookCategory.read:
-        return appState.booksRead;
+        books = List.from(appState.booksRead);
+        break;
     }
+
+    if (_currentSort == SortOption.alphabeticalAZ) {
+      books.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    } else if (_currentSort == SortOption.alphabeticalZA) {
+      books.sort((a, b) => b.title.toLowerCase().compareTo(a.title.toLowerCase()));
+    } else if (_currentSort == SortOption.ratingHighest) {
+      books.sort((a, b) => b.rating.compareTo(a.rating));
+    }
+    
+    return books;
   }
 
   void _showUpdateProgressDialog(Book book) {
@@ -107,6 +126,48 @@ class _BookListPageState extends State<BookListPage> {
       appBar: AppBar(
         title: Text(_title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: Icon(_isGridView ? Icons.view_list : Icons.grid_view),
+            tooltip: _isGridView ? 'Vista a lista' : 'Vista a griglia',
+            onPressed: () {
+              setState(() {
+                _isGridView = !_isGridView;
+              });
+            },
+          ),
+          PopupMenuButton<SortOption>(
+            icon: const Icon(Icons.sort),
+            tooltip: 'Ordina',
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            onSelected: (SortOption result) {
+              setState(() {
+                _currentSort = result;
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+              const PopupMenuItem<SortOption>(
+                value: SortOption.none,
+                child: Text('Predefinito (Cronologico)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.alphabeticalAZ,
+                child: Text('Alfabetico (A-Z)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.alphabeticalZA,
+                child: Text('Alfabetico (Z-A)'),
+              ),
+              if (widget.category == BookCategory.read)
+                const PopupMenuItem<SortOption>(
+                  value: SortOption.ratingHighest,
+                  child: Text('Voto più alto'),
+                ),
+            ],
+          ),
+        ],
       ),
       body: Builder(
         builder: (context) {
@@ -122,11 +183,23 @@ class _BookListPageState extends State<BookListPage> {
           }
           return ResponsiveWrapper(
             maxWidth: 700,
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
-              itemCount: books.length,
-              itemBuilder: (context, index) => _buildBookCard(books[index]),
-            ),
+            child: _isGridView
+                ? GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      childAspectRatio: 0.55,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: books.length,
+                    itemBuilder: (context, index) => _buildBookGridItem(books[index]),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(8),
+                    itemCount: books.length,
+                    itemBuilder: (context, index) => _buildBookCard(books[index]),
+                  ),
           );
         },
       ),
@@ -282,6 +355,79 @@ class _BookListPageState extends State<BookListPage> {
           ],
         ),
       ),
+      ),
+    );
+  }
+
+  Widget _buildBookGridItem(Book book) {
+    return InkWell(
+      onTap: () => showBookDetailSheet(context, book),
+      onLongPress: () => _showBookActionsSheet(book),
+      borderRadius: BorderRadius.circular(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Copertina
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: book.coverUrl != null
+                  ? Image.network(
+                      book.coverUrl!,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (ctx, err, st) => _buildPlaceholderCover(ctx, fill: true),
+                    )
+                  : _buildPlaceholderCover(context, fill: true),
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Titolo
+          Text(
+            book.title,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          // Indicatori specifici per categoria
+          if (widget.category == BookCategory.read) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: List.generate(5, (index) {
+                return Icon(
+                  index < book.rating ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 14,
+                );
+              }),
+            ),
+          ] else if (widget.category == BookCategory.reading) ...[
+             const SizedBox(height: 4),
+             LinearProgressIndicator(
+               value: book.progress,
+               backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+               color: Theme.of(context).colorScheme.primary,
+               minHeight: 4,
+               borderRadius: BorderRadius.circular(2),
+             ),
+             const SizedBox(height: 4),
+             Text(
+               '${book.currentPage}/${book.totalPages} pag',
+               style: const TextStyle(fontSize: 11, color: Colors.grey),
+             ),
+          ] else if (widget.category == BookCategory.toRead) ...[
+             const SizedBox(height: 2),
+             Text(
+               book.author,
+               style: const TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
+               maxLines: 1,
+               overflow: TextOverflow.ellipsis,
+             ),
+          ]
+        ],
       ),
     );
   }
@@ -510,10 +656,10 @@ class _BookListPageState extends State<BookListPage> {
   }
 
 
-  Widget _buildPlaceholderCover(BuildContext context, {bool large = false}) {
+  Widget _buildPlaceholderCover(BuildContext context, {bool large = false, bool fill = false}) {
     return Container(
-      width: large ? 120 : 80,
-      height: large ? 180 : 120,
+      width: fill ? double.infinity : (large ? 120 : 80),
+      height: fill ? double.infinity : (large ? 180 : 120),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
