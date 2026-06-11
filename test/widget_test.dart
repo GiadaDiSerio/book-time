@@ -9,6 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:book_time/main.dart';
+import 'package:book_time/app_state.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
@@ -16,7 +18,15 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const BookTimeApp());
+    final appState = AppState();
+    await appState.loadState();
+    
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (context) => appState,
+        child: const BookTimeApp(),
+      ),
+    );
 
     // Verify that our app shows the 'Book Time' title.
     expect(find.text('Book Time'), findsWidgets);

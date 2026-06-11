@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';
+import 'services/storage_service.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 
@@ -27,31 +28,29 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
 
   /// Salva lo stato del timer in SharedPreferences
   Future<void> _saveTimerState() async {
-    final prefs = await SharedPreferences.getInstance();
     if (_isRunning) {
       // Se il timer è in esecuzione, salviamo il timestamp di quando è partito
       // sottraendo i secondi già accumulati, così al ripristino possiamo
       // ricalcolare il tempo trascorso
       final startTimestamp = DateTime.now().millisecondsSinceEpoch - (_seconds * 1000);
-      await prefs.setInt('timerStartTimestamp', startTimestamp);
-      await prefs.setBool('timerWasRunning', true);
+      await storageService.saveInt('timerStartTimestamp', startTimestamp);
+      await storageService.saveBool('timerWasRunning', true);
     } else if (_seconds > 0) {
       // Timer in pausa con dei secondi accumulati
-      await prefs.setInt('timerPausedSeconds', _seconds);
-      await prefs.setBool('timerWasRunning', false);
+      await storageService.saveInt('timerPausedSeconds', _seconds);
+      await storageService.saveBool('timerWasRunning', false);
     }
   }
 
   /// Ripristina lo stato del timer da SharedPreferences
   Future<void> _restoreTimerState() async {
-    final prefs = await SharedPreferences.getInstance();
-    final wasRunning = prefs.getBool('timerWasRunning');
+    final wasRunning = await storageService.getBool('timerWasRunning');
 
     if (wasRunning == null) return; // Nessun timer salvato
 
     if (wasRunning) {
       // Il timer era in esecuzione: calcoliamo quanti secondi sono passati
-      final startTimestamp = prefs.getInt('timerStartTimestamp') ?? 0;
+      final startTimestamp = await storageService.getInt('timerStartTimestamp') ?? 0;
       final elapsedMs = DateTime.now().millisecondsSinceEpoch - startTimestamp;
       final restoredSeconds = (elapsedMs / 1000).floor();
 
@@ -63,7 +62,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
       _startTimer();
     } else {
       // Il timer era in pausa
-      final pausedSeconds = prefs.getInt('timerPausedSeconds') ?? 0;
+      final pausedSeconds = await storageService.getInt('timerPausedSeconds') ?? 0;
       if (pausedSeconds > 0) {
         setState(() {
           _seconds = pausedSeconds;
@@ -77,10 +76,9 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
 
   /// Rimuove i dati del timer salvati
   Future<void> _clearSavedTimerState() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('timerStartTimestamp');
-    await prefs.remove('timerWasRunning');
-    await prefs.remove('timerPausedSeconds');
+    await storageService.remove('timerStartTimestamp');
+    await storageService.remove('timerWasRunning');
+    await storageService.remove('timerPausedSeconds');
   }
 
   /// Intercetta i cambiamenti del ciclo di vita dell'app
@@ -132,7 +130,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     _clearSavedTimerState();
     
     // Aggiungiamo il tempo alle statistiche globali!
-    appState.addReadingTime(_seconds);
+    context.read<AppState>().addReadingTime(_seconds);
     
     // Mostriamo un avviso alla fine della sessione
     showDialog(
@@ -266,7 +264,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
               }
 
               if (totalSeconds > 0) {
-                appState.addReadingTime(totalSeconds);
+                context.read<AppState>().addReadingTime(totalSeconds);
                 Navigator.pop(dialogContext);
 
                 // Mostra conferma

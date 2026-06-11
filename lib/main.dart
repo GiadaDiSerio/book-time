@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'search_page.dart';
 import 'timer_page.dart';
 import 'app_state.dart';
@@ -7,8 +8,14 @@ import 'settings_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final appState = AppState();
   await appState.loadState();
-  runApp(const BookTimeApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => appState,
+      child: const BookTimeApp(),
+    ),
+  );
 }
 
 class BookTimeApp extends StatelessWidget {
@@ -16,26 +23,22 @@ class BookTimeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: appState,
-      builder: (context, child) {
-        return MaterialApp(
-          title: 'Book Time',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-            useMaterial3: true,
-          ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: Colors.deepPurple,
-              brightness: Brightness.dark,
-            ),
-            useMaterial3: true,
-          ),
-          themeMode: appState.themeMode,
-          home: const HomePage(),
-        );
-      },
+    final appState = context.watch<AppState>();
+    return MaterialApp(
+      title: 'Book Time',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: appState.themeMode,
+      home: const HomePage(),
     );
   }
 }
@@ -53,11 +56,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    if (appState.isFirstLaunch) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final appState = context.read<AppState>();
+      if (appState.isFirstLaunch) {
         _showWelcomeDialog();
-      });
-    }
+      }
+    });
   }
 
   // Dialog di benvenuto al primo avvio
@@ -96,7 +100,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
-                appState.setUserName(name);
+                context.read<AppState>().setUserName(name);
                 Navigator.pop(dialogContext);
               }
             },

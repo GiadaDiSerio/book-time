@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'app_state.dart';
-import 'book_utils.dart';
+import 'services/api_service.dart';
 
 /// Mostra un bottom sheet con i dettagli di un libro: copertina, titolo,
 /// autore, progresso (se in lettura), rating (se letto) e trama.
@@ -20,7 +21,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
         builder: (ctx, setStateSheet) {
           if (!hasFetched) {
             hasFetched = true;
-            fetchBookPlot(book.title, book.author).then((fetchedPlot) {
+            apiService.fetchBookPlot(book.title, book.author).then((fetchedPlot) {
               if (ctx.mounted) {
                 setStateSheet(() {
                   plot = fetchedPlot;
@@ -29,6 +30,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
             });
           }
 
+          final appState = ctx.watch<AppState>();
           final isRead = appState.booksRead.any((b) => b.id == book.id);
 
           return SafeArea(
@@ -132,7 +134,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                               size: 40,
                             ),
                             onPressed: () {
-                              appState.rateBook(book.id, index + 1);
+                              ctx.read<AppState>().rateBook(book.id, index + 1);
                               setStateSheet(() {});
                             },
                           );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'app_state.dart';
 
 /// Mostra il dialog delle impostazioni: lingua dei risultati e tema dell'app.
@@ -8,6 +9,7 @@ void showSettingsDialog(BuildContext context) {
     builder: (dialogContext) {
       return StatefulBuilder(
         builder: (dialogCtx, setStateDialog) {
+          final appState = dialogCtx.watch<AppState>();
           return AlertDialog(
             title: const Text('Impostazioni'),
             content: Column(
@@ -28,8 +30,7 @@ void showSettingsDialog(BuildContext context) {
                   ],
                   onChanged: (String? newValue) {
                     if (newValue != null) {
-                      appState.setLanguageCode(newValue);
-                      setStateDialog(() {});
+                      dialogCtx.read<AppState>().setLanguageCode(newValue);
                     }
                   },
                 ),
@@ -46,8 +47,7 @@ void showSettingsDialog(BuildContext context) {
                   ],
                   onChanged: (ThemeMode? newValue) {
                     if (newValue != null) {
-                      appState.setThemeMode(newValue);
-                      setStateDialog(() {});
+                      dialogCtx.read<AppState>().setThemeMode(newValue);
                     }
                   },
                 ),

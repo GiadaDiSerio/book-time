@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert'; // Serve per leggere il formato JSON che ci manda Google
+import 'package:provider/provider.dart';
+import 'services/api_service.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 import 'suggestions_widget.dart';
@@ -39,56 +39,29 @@ class _SearchPageState extends State<SearchPage> {
   // Contatore per forzare il refresh dei suggerimenti
   int _refreshCounter = 0;
 
-  // Questa è la funzione che chiama le API di Open Library (gratuite, senza API key!)
   Future<void> searchBooks(String query) async {
     _debounce?.cancel();
-    if (query.isEmpty) return; // Se l'utente non ha scritto nulla, fermati
+    if (query.isEmpty) return;
 
     setState(() {
-      _isLoading = true; // Mostra il caricamento
-      _errorMessage = null; // Resetta eventuali errori precedenti
-      _searchResults = []; // Pulisci i risultati precedenti
+      _isLoading = true;
+      _errorMessage = null;
+      _searchResults = [];
     });
 
-    // L'indirizzo web delle API di Open Library (gratuite e senza limiti!)
-    final url = Uri.parse(
-      'https://openlibrary.org/search.json?q=${Uri.encodeComponent(query)}&language=${appState.languageCode}&limit=20',
-    );
-
     try {
-      debugPrint('--- Inizio ricerca per: $query ---');
-      debugPrint('URL: $url');
-      final response = await http.get(url); // Facciamo la richiesta a internet
-      debugPrint('Status code: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        // Se la risposta è OK (200), trasformiamo il testo JSON in una mappa Dart
-        final data = json.decode(response.body);
-        // Open Library usa 'docs' invece di 'items'
-        final docs = data['docs'] as List? ?? [];
-        debugPrint('Numero risultati: ${docs.length}');
-        setState(() {
-          _searchResults = docs;
-          if (_searchResults.isEmpty) {
-            _errorMessage = 'Nessun libro trovato per "$query"';
-          }
-        });
-      } else {
-        setState(() {
-          if (response.statusCode == 422) {
-            _errorMessage = 'Ricerca troppo breve o non valida. Prova a scrivere parole intere.';
-          } else {
-            _errorMessage = 'Si è verificato un problema nella ricerca. Riprova più tardi.';
-          }
-        });
-        debugPrint('Errore nella ricerca: ${response.statusCode}');
-      }
-    } catch (e, stackTrace) {
+      final appState = context.read<AppState>();
+      final docs = await apiService.searchBooks(query, appState.languageCode);
       setState(() {
-        _errorMessage = 'Errore di connessione. Controlla la tua rete e riprova.';
+        _searchResults = docs;
+        if (_searchResults.isEmpty) {
+          _errorMessage = 'Nessun libro trovato per "$query"';
+        }
       });
-      debugPrint('Errore di connessione: $e');
-      debugPrint('Stack trace: $stackTrace');
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
     } finally {
       setState(() {
         _isLoading = false; // Nascondi il caricamento alla fine
@@ -98,6 +71,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
     return ResponsiveWrapper(
         maxWidth: 700,
         child: Column(

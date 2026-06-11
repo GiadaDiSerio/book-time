@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:ui' as ui;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'services/storage_service.dart';
 import 'package:uuid/uuid.dart';
 
 class Book {
@@ -56,20 +56,11 @@ class Book {
   }
 }
 
-// Classe singleton globale per lo stato
 class AppState extends ChangeNotifier {
-  // Istanza singleton per potervi accedere ovunque facilmente senza provider (vista la semplicità dell'app)
-  static final AppState _instance = AppState._internal();
-  
-  factory AppState() {
-    return _instance;
-  }
-  
-  AppState._internal();
 
   // --- PROFILO UTENTE ---
   String _userName = '';
-  String _profileImageBase64 = '';
+  String _profileImagePath = '';
 
   // --- IMPOSTAZIONI ---
   String _languageCode = 'ita';
@@ -86,7 +77,7 @@ class AppState extends ChangeNotifier {
 
   // --- GETTERS ---
   String get userName => _userName;
-  String get profileImageBase64 => _profileImageBase64;
+  String get profileImagePath => _profileImagePath;
   String get languageCode => _languageCode;
   ThemeMode get themeMode => _themeMode;
   bool get isFirstLaunch => _userName.isEmpty;
@@ -101,12 +92,10 @@ class AppState extends ChangeNotifier {
   // --- PERSISTENZA DEI DATI ---
 
   Future<void> loadState() async {
-    final prefs = await SharedPreferences.getInstance();
+    _userName = await storageService.getString('userName') ?? '';
+    _profileImagePath = await storageService.getString('profileImagePath') ?? '';
     
-    _userName = prefs.getString('userName') ?? '';
-    _profileImageBase64 = prefs.getString('profileImageBase64') ?? '';
-    
-    final savedLang = prefs.getString('languageCode');
+    final savedLang = await storageService.getString('languageCode');
     if (savedLang != null) {
       _languageCode = savedLang;
     } else {
@@ -114,7 +103,7 @@ class AppState extends ChangeNotifier {
       _languageCode = _mapLanguageToOpenLibrary(systemLoc);
     }
 
-    final savedTheme = prefs.getString('themeMode');
+    final savedTheme = await storageService.getString('themeMode');
     if (savedTheme == 'light') {
       _themeMode = ThemeMode.light;
     } else if (savedTheme == 'dark') {
@@ -123,48 +112,43 @@ class AppState extends ChangeNotifier {
       _themeMode = ThemeMode.system;
     }
 
-    _totalReadingSeconds = prefs.getInt('totalReadingSeconds') ?? 0;
+    _totalReadingSeconds = await storageService.getInt('totalReadingSeconds') ?? 0;
 
-    final String? booksToReadJson = prefs.getString('booksToRead');
+    final String? booksToReadJson = await storageService.getString('booksToRead');
     if (booksToReadJson != null) {
       final List<dynamic> decoded = jsonDecode(booksToReadJson);
       _booksToRead = decoded.map((item) => Book.fromJson(item)).toList();
     }
 
-    final String? booksReadingJson = prefs.getString('booksReading');
+    final String? booksReadingJson = await storageService.getString('booksReading');
     if (booksReadingJson != null) {
       final List<dynamic> decoded = jsonDecode(booksReadingJson);
       _booksReading = decoded.map((item) => Book.fromJson(item)).toList();
     }
 
-    final String? booksReadJson = prefs.getString('booksRead');
+    final String? booksReadJson = await storageService.getString('booksRead');
     if (booksReadJson != null) {
       final List<dynamic> decoded = jsonDecode(booksReadJson);
       _booksRead = decoded.map((item) => Book.fromJson(item)).toList();
     }
 
-
-
     notifyListeners();
   }
 
   Future<void> saveState() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    await prefs.setString('userName', _userName);
-    await prefs.setString('profileImageBase64', _profileImageBase64);
-    await prefs.setString('languageCode', _languageCode);
+    await storageService.saveString('userName', _userName);
+    await storageService.saveString('profileImagePath', _profileImagePath);
+    await storageService.saveString('languageCode', _languageCode);
     
     String themeStr = 'system';
     if (_themeMode == ThemeMode.light) themeStr = 'light';
     if (_themeMode == ThemeMode.dark) themeStr = 'dark';
-    await prefs.setString('themeMode', themeStr);
-    await prefs.setInt('totalReadingSeconds', _totalReadingSeconds);
+    await storageService.saveString('themeMode', themeStr);
+    await storageService.saveInt('totalReadingSeconds', _totalReadingSeconds);
 
-    await prefs.setString('booksToRead', jsonEncode(_booksToRead.map((b) => b.toJson()).toList()));
-    await prefs.setString('booksReading', jsonEncode(_booksReading.map((b) => b.toJson()).toList()));
-    await prefs.setString('booksRead', jsonEncode(_booksRead.map((b) => b.toJson()).toList()));
-
+    await storageService.saveString('booksToRead', jsonEncode(_booksToRead.map((b) => b.toJson()).toList()));
+    await storageService.saveString('booksReading', jsonEncode(_booksReading.map((b) => b.toJson()).toList()));
+    await storageService.saveString('booksRead', jsonEncode(_booksRead.map((b) => b.toJson()).toList()));
   }
 
   // --- METODI PER AGGIORNARE LO STATO ---
@@ -175,8 +159,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
   
-  void setProfileImage(String base64Image) {
-    _profileImageBase64 = base64Image;
+  void setProfileImagePath(String path) {
+    _profileImagePath = path;
     saveState();
     notifyListeners();
   }
@@ -373,6 +357,3 @@ class AppState extends ChangeNotifier {
     }
   }
 }
-
-// Creiamo un'istanza accessibile a tutti
-final appState = AppState();

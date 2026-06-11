@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:provider/provider.dart';
+import 'services/api_service.dart';
 import 'app_state.dart';
 import 'add_book_sheet.dart';
 
@@ -33,16 +33,13 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
     });
 
     try {
-      String query = '';
-
-      // Raccogliamo autori dai libri con voti alti (4 o 5 stelle)
+      final appState = context.read<AppState>();
       List<String> validAuthors = appState.booksRead
           .where((b) => b.rating >= 4 && b.author != 'Autore sconosciuto')
           .map((b) => b.author)
           .toSet()
           .toList();
 
-      // Se non ci sono voti alti, raccogliamo autori da TUTTE le liste come fallback
       if (validAuthors.isEmpty) {
         final allBooks = [
           ...appState.booksRead,
@@ -56,53 +53,25 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
             .toList();
       }
 
-      final subjects = [
-        'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
-        'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
-        'filosofia', 'arte', 'scienza', 'psicologia', 'classici',
+      final allMyBookTitles = [
+        ...appState.booksRead.map((b) => b.title.toLowerCase()),
+        ...appState.booksReading.map((b) => b.title.toLowerCase()),
+        ...appState.booksToRead.map((b) => b.title.toLowerCase()),
       ];
 
-      if (widget.mode == SuggestionMode.author && validAuthors.isNotEmpty) {
-        // Modalità autore: suggerimenti basati su un autore dalle liste
-        final randomAuthor = validAuthors[Random().nextInt(validAuthors.length)];
-        final cleanAuthor = randomAuthor.split(',').first.trim();
-        query = 'author=${Uri.encodeComponent(cleanAuthor)}';
-        _suggestionReason = 'Perché ti piace $cleanAuthor';
-      } else {
-        // Modalità genere (o fallback se non ci sono autori)
-        final randomSubject = subjects[Random().nextInt(subjects.length)];
-        query = 'subject=${Uri.encodeComponent(randomSubject)}';
-        _suggestionReason = 'Esplora: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
-      }
+      final result = await apiService.fetchSuggestions(
+        validAuthors: validAuthors,
+        isAuthorMode: widget.mode == SuggestionMode.author,
+        languageCode: appState.languageCode,
+        existingBookTitles: allMyBookTitles,
+      );
 
-      final url = Uri.parse('https://openlibrary.org/search.json?$query&language=${appState.languageCode}&limit=15');
-      final response = await http.get(url);
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final docs = data['docs'] as List? ?? [];
-        
-        // Filtriamo i libri che abbiamo già nelle nostre liste!
-        final allMyBookTitles = [
-          ...appState.booksRead.map((b) => b.title.toLowerCase()),
-          ...appState.booksReading.map((b) => b.title.toLowerCase()),
-          ...appState.booksToRead.map((b) => b.title.toLowerCase()),
-        ];
-
-        final filteredDocs = docs.where((book) {
-          final title = (book['title'] ?? '').toString().toLowerCase();
-          final hasCover = book['cover_i'] != null;
-          return hasCover && !allMyBookTitles.contains(title); // Solo con copertina e non già letti
-        }).take(8).toList(); // Prendiamo i primi 8 validi
-
-        if (mounted) {
-          setState(() {
-            _suggestions = filteredDocs;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _suggestionReason = result[0];
+          _suggestions = result[1];
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);

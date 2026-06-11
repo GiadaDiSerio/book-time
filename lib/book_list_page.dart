@@ -1,5 +1,6 @@
 import 'book_detail_sheet.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 import 'rating_dialog.dart';
@@ -27,7 +28,7 @@ class _BookListPageState extends State<BookListPage> {
     }
   }
 
-  List<Book> get _books {
+  List<Book> _getBooks(AppState appState) {
     switch (widget.category) {
       case BookCategory.reading:
         return appState.booksReading;
@@ -72,6 +73,7 @@ class _BookListPageState extends State<BookListPage> {
             onPressed: () {
               final page = int.tryParse(controller.text) ?? book.currentPage;
               final clampedPage = page.clamp(0, book.totalPages);
+              final appState = context.read<AppState>();
               bool completed = appState.updateReadingProgress(book.id, clampedPage);
               Navigator.pop(ctx);
               if (completed) {
@@ -84,7 +86,7 @@ class _BookListPageState extends State<BookListPage> {
                   ),
                 );
                 showRatingDialog(context, book.title, (rating) {
-                  if (rating > 0) appState.rateBook(book.id, rating);
+                  if (rating > 0) context.read<AppState>().rateBook(book.id, rating);
                 });
               }
             },
@@ -106,10 +108,10 @@ class _BookListPageState extends State<BookListPage> {
         title: Text(_title),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: ListenableBuilder(
-        listenable: appState,
-        builder: (context, child) {
-          final books = _books;
+      body: Builder(
+        builder: (context) {
+          final appState = context.watch<AppState>();
+          final books = _getBooks(appState);
           if (books.isEmpty) {
             return const Center(
               child: Text(
@@ -231,7 +233,7 @@ class _BookListPageState extends State<BookListPage> {
                     GestureDetector(
                       onTap: () {
                         showRatingDialog(context, book.title, (rating) {
-                          appState.rateBook(book.id, rating);
+                          context.read<AppState>().rateBook(book.id, rating);
                         });
                       },
                       child: Row(
@@ -311,7 +313,7 @@ class _BookListPageState extends State<BookListPage> {
                   title: const Text('Sposta in "Da leggere"'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    appState.moveBookToToRead(book.id);
+                    context.read<AppState>().moveBookToToRead(book.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('📚 "${book.title}" spostato in "Da leggere"'),
@@ -337,7 +339,7 @@ class _BookListPageState extends State<BookListPage> {
                   onTap: () {
                     Navigator.pop(sheetContext);
                     showRatingDialog(context, book.title, (rating) {
-                      appState.moveBookToRead(book.id, rating: rating);
+                      context.read<AppState>().moveBookToRead(book.id, rating: rating);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('✅ "${book.title}" spostato in "Letti"'),
@@ -395,7 +397,7 @@ class _BookListPageState extends State<BookListPage> {
             onPressed: () {
               final pages = int.tryParse(pagesController.text);
               if (pages != null && pages > 0) {
-                appState.moveBookToReading(book.id, pages);
+                context.read<AppState>().moveBookToReading(book.id, pages);
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -427,7 +429,7 @@ class _BookListPageState extends State<BookListPage> {
     final savedRating = book.rating;
     final savedCategory = widget.category;
 
-    appState.removeBook(book.id);
+    context.read<AppState>().removeBook(book.id);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars(); // Rimuove eventuali snackbar precedenti
@@ -440,6 +442,7 @@ class _BookListPageState extends State<BookListPage> {
           textColor: Colors.amber,
           onPressed: () {
             // Ripristina il libro nella lista originale con il suo ID originale
+            final appState = context.read<AppState>();
             switch (savedCategory) {
               case BookCategory.toRead:
                 appState.addBookToRead(

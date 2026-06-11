@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'responsive_wrapper.dart';
 import 'book_list_page.dart';
@@ -13,10 +15,8 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: appState,
-      builder: (context, child) {
-        return ResponsiveWrapper(
+    final appState = context.watch<AppState>();
+    return ResponsiveWrapper(
           maxWidth: 700,
           child: ListView(
             padding: const EdgeInsets.only(bottom: 24),
@@ -43,10 +43,10 @@ class ProfileTab extends StatelessWidget {
                       CircleAvatar(
                         radius: 30,
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        backgroundImage: appState.profileImageBase64.isNotEmpty
-                            ? MemoryImage(base64Decode(appState.profileImageBase64))
+                        backgroundImage: appState.profileImagePath.isNotEmpty
+                            ? FileImage(File(appState.profileImagePath))
                             : null,
-                        child: appState.profileImageBase64.isNotEmpty
+                        child: appState.profileImagePath.isNotEmpty
                             ? null
                             : const Icon(Icons.person, size: 35, color: Colors.white),
                       ),
@@ -166,8 +166,6 @@ class ProfileTab extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 
   // Naviga alla pagina dettaglio di una sezione
@@ -184,6 +182,7 @@ class ProfileTab extends StatelessWidget {
   // Dialog modifica profilo (nome + foto)
   // ============================================
   void _showEditProfileDialog(BuildContext context) {
+    final appState = context.read<AppState>();
     final nameController = TextEditingController(text: appState.userName);
     final ImagePicker picker = ImagePicker();
     
@@ -192,7 +191,8 @@ class ProfileTab extends StatelessWidget {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogCtx, setStateDialog) {
-            final hasImage = appState.profileImageBase64.isNotEmpty;
+            final appState = dialogCtx.watch<AppState>();
+            final hasImage = appState.profileImagePath.isNotEmpty;
             return AlertDialog(
               title: const Text('Modifica Profilo'),
               content: SingleChildScrollView(
@@ -209,9 +209,11 @@ class ProfileTab extends StatelessWidget {
                             imageQuality: 70,
                           );
                           if (image != null) {
-                            final bytes = await image.readAsBytes();
-                            final base64String = base64Encode(bytes);
-                            appState.setProfileImage(base64String);
+                            final appDir = await getApplicationDocumentsDirectory();
+                            final fileName = 'profile_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                            final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
+                            
+                            dialogCtx.read<AppState>().setProfileImagePath(savedImage.path);
                             setStateDialog(() {});
                           }
                         } catch (e) {
@@ -225,7 +227,7 @@ class ProfileTab extends StatelessWidget {
                             radius: 40,
                             backgroundColor: Theme.of(dialogCtx).colorScheme.primary,
                             backgroundImage: hasImage 
-                                ? MemoryImage(base64Decode(appState.profileImageBase64))
+                                ? FileImage(File(appState.profileImagePath))
                                 : null,
                             child: hasImage
                                 ? null
@@ -272,7 +274,7 @@ class ProfileTab extends StatelessWidget {
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isNotEmpty) {
-                      appState.setUserName(name);
+                      dialogCtx.read<AppState>().setUserName(name);
                       Navigator.pop(dialogContext);
                     }
                   },
