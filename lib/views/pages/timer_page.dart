@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/storage_service.dart';
-import 'app_state.dart';
-import 'responsive_wrapper.dart';
+import '../../services/storage_service.dart';
+import '../../controllers/app_controller.dart';
+import '../widgets/responsive_wrapper.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -130,7 +130,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
     _clearSavedTimerState();
     
     // Aggiungiamo il tempo alle statistiche globali!
-    context.read<AppState>().addReadingTime(_seconds);
+    context.read<AppController>().addReadingTime(_seconds);
     
     // Mostriamo un avviso alla fine della sessione
     showDialog(
@@ -264,7 +264,7 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
               }
 
               if (totalSeconds > 0) {
-                context.read<AppState>().addReadingTime(totalSeconds);
+                context.read<AppController>().addReadingTime(totalSeconds);
                 Navigator.pop(dialogContext);
 
                 // Mostra conferma

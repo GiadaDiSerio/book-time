@@ -1,9 +1,10 @@
-import 'book_detail_sheet.dart';
+import '../../models/book.dart';
+import '../dialogs/book_detail_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'responsive_wrapper.dart';
-import 'rating_dialog.dart';
+import '../../controllers/app_controller.dart';
+import '../widgets/responsive_wrapper.dart';
+import '../dialogs/rating_dialog.dart';
 
 enum BookCategory { reading, toRead, read }
 
@@ -33,17 +34,17 @@ class _BookListPageState extends State<BookListPage> {
     }
   }
 
-  List<Book> _getBooks(AppState appState) {
+  List<Book> _getBooks(AppController appController) {
     List<Book> books;
     switch (widget.category) {
       case BookCategory.reading:
-        books = List.from(appState.booksReading);
+        books = List.from(appController.booksReading);
         break;
       case BookCategory.toRead:
-        books = List.from(appState.booksToRead);
+        books = List.from(appController.booksToRead);
         break;
       case BookCategory.read:
-        books = List.from(appState.booksRead);
+        books = List.from(appController.booksRead);
         break;
     }
 
@@ -92,8 +93,8 @@ class _BookListPageState extends State<BookListPage> {
             onPressed: () {
               final page = int.tryParse(controller.text) ?? book.currentPage;
               final clampedPage = page.clamp(0, book.totalPages);
-              final appState = context.read<AppState>();
-              bool completed = appState.updateReadingProgress(book.id, clampedPage);
+              final appController = context.read<AppController>();
+              bool completed = appController.updateReadingProgress(book.id, clampedPage);
               Navigator.pop(ctx);
               if (completed) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -105,7 +106,7 @@ class _BookListPageState extends State<BookListPage> {
                   ),
                 );
                 showRatingDialog(context, book.title, (rating) {
-                  if (rating > 0) context.read<AppState>().rateBook(book.id, rating);
+                  if (rating > 0) context.read<AppController>().rateBook(book.id, rating);
                 });
               }
             },
@@ -171,8 +172,8 @@ class _BookListPageState extends State<BookListPage> {
       ),
       body: Builder(
         builder: (context) {
-          final appState = context.watch<AppState>();
-          final books = _getBooks(appState);
+          final appController = context.watch<AppController>();
+          final books = _getBooks(appController);
           if (books.isEmpty) {
             return const Center(
               child: Text(
@@ -325,7 +326,7 @@ class _BookListPageState extends State<BookListPage> {
                     GestureDetector(
                       onTap: () {
                         showRatingDialog(context, book.title, (rating) {
-                          context.read<AppState>().rateBook(book.id, rating);
+                          context.read<AppController>().rateBook(book.id, rating);
                         });
                       },
                       child: Row(
@@ -478,7 +479,7 @@ class _BookListPageState extends State<BookListPage> {
                   title: const Text('Sposta in "Da leggere"'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    context.read<AppState>().moveBookToToRead(book.id);
+                    context.read<AppController>().moveBookToToRead(book.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('📚 "${book.title}" spostato in "Da leggere"'),
@@ -504,7 +505,7 @@ class _BookListPageState extends State<BookListPage> {
                   onTap: () {
                     Navigator.pop(sheetContext);
                     showRatingDialog(context, book.title, (rating) {
-                      context.read<AppState>().moveBookToRead(book.id, rating: rating);
+                      context.read<AppController>().moveBookToRead(book.id, rating: rating);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('✅ "${book.title}" spostato in "Letti"'),
@@ -562,7 +563,7 @@ class _BookListPageState extends State<BookListPage> {
             onPressed: () {
               final pages = int.tryParse(pagesController.text);
               if (pages != null && pages > 0) {
-                context.read<AppState>().moveBookToReading(book.id, pages);
+                context.read<AppController>().moveBookToReading(book.id, pages);
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -593,9 +594,9 @@ class _BookListPageState extends State<BookListPage> {
     final savedCoverUrl = book.coverUrl;
     final savedRating = book.rating;
     final savedCategory = widget.category;
-    final appState = context.read<AppState>();
+    final appController = context.read<AppController>();
 
-    appState.removeBook(book.id);
+    appController.removeBook(book.id);
 
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars(); // Rimuove eventuali snackbar precedenti
@@ -611,7 +612,7 @@ class _BookListPageState extends State<BookListPage> {
             // Ripristina il libro nella lista originale con il suo ID originale
             switch (savedCategory) {
               case BookCategory.toRead:
-                appState.addBookToRead(
+                appController.addBookToRead(
                   savedTitle,
                   id: savedId,
                   author: savedAuthor,
@@ -620,7 +621,7 @@ class _BookListPageState extends State<BookListPage> {
                 );
                 break;
               case BookCategory.reading:
-                appState.addBookReading(
+                appController.addBookReading(
                   savedTitle,
                   id: savedId,
                   author: savedAuthor,
@@ -629,11 +630,11 @@ class _BookListPageState extends State<BookListPage> {
                 );
                 // Ripristina anche il progresso
                 if (savedCurrentPage > 0) {
-                  appState.updateReadingProgress(savedId, savedCurrentPage);
+                  appController.updateReadingProgress(savedId, savedCurrentPage);
                 }
                 break;
               case BookCategory.read:
-                appState.addBookRead(
+                appController.addBookRead(
                   savedTitle,
                   id: savedId,
                   author: savedAuthor,

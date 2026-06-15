@@ -1,7 +1,8 @@
+import '../../models/book.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'services/api_service.dart';
+import '../../controllers/app_controller.dart';
+import '../../services/api_service.dart';
 
 /// Mostra un bottom sheet con i dettagli di un libro: copertina, titolo,
 /// autore, progresso (se in lettura), rating (se letto) e trama.
@@ -30,8 +31,8 @@ void showBookDetailSheet(BuildContext context, Book book) {
             });
           }
 
-          final appState = ctx.watch<AppState>();
-          final isRead = appState.booksRead.any((b) => b.id == book.id);
+          final appController = ctx.watch<AppController>();
+          final isRead = appController.booksRead.any((b) => b.id == book.id);
 
           return SafeArea(
             child: Padding(
@@ -134,7 +135,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                               size: 40,
                             ),
                             onPressed: () {
-                              ctx.read<AppState>().rateBook(book.id, index + 1);
+                              ctx.read<AppController>().rateBook(book.id, index + 1);
                               setStateSheet(() {});
                             },
                           );

@@ -33,7 +33,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   
   # I pacchetti per la tua app:
-  http: ^1.2.0              # Per chiamare le Google Books API
+  http: ^1.2.0              # Per chiamare le Open Library API
   shared_preferences: ^2.5.5
   image_picker: ^1.2.2
   uuid: ^4.5.3

@@ -1,12 +1,13 @@
+import '../../models/book.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'responsive_wrapper.dart';
-import 'book_list_page.dart';
-import 'book_detail_sheet.dart';
+import '../../controllers/app_controller.dart';
+import '../widgets/responsive_wrapper.dart';
+import '../pages/book_list_page.dart';
+import '../dialogs/book_detail_sheet.dart';
 
 /// Tab del profilo: mostra il profilo utente, le statistiche di lettura
 /// e le tre liste di libri in formato orizzontale.
@@ -15,7 +16,7 @@ class ProfileTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final appController = context.watch<AppController>();
     return ResponsiveWrapper(
           maxWidth: 700,
           child: ListView(
@@ -40,15 +41,15 @@ class ProfileTab extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      _buildSafeAvatar(context, appState, 30, 35),
+                      _buildSafeAvatar(context, appController, 30, 35),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              appState.userName.isNotEmpty
-                                  ? appState.userName
+                              appController.userName.isNotEmpty
+                                  ? appController.userName
                                   : 'Username',
                               style: TextStyle(
                                 fontSize: 18,
@@ -86,7 +87,7 @@ class ProfileTab extends StatelessWidget {
                       child: _buildStatCard(
                         context,
                         'Libri letti',
-                        '${appState.totalBooksRead}',
+                        '${appController.totalBooksRead}',
                         Icons.menu_book,
                       ),
                     ),
@@ -95,7 +96,7 @@ class ProfileTab extends StatelessWidget {
                       child: _buildStatCard(
                         context,
                         'Tempo letto',
-                        appState.formattedTotalTime,
+                        appController.formattedTotalTime,
                         Icons.timer,
                       ),
                     ),
@@ -111,12 +112,12 @@ class ProfileTab extends StatelessWidget {
               _buildSectionHeader(
                 context,
                 '📖 In lettura',
-                appState.booksReading.length,
+                appController.booksReading.length,
                 onTap: () => _openBookListPage(context, BookCategory.reading),
               ),
               _buildHorizontalBookList(
                 context,
-                appState.booksReading,
+                appController.booksReading,
                 emptyMessage: 'Nessun libro in lettura',
                 showProgress: true,
               ),
@@ -129,12 +130,12 @@ class ProfileTab extends StatelessWidget {
               _buildSectionHeader(
                 context,
                 '📚 Da leggere',
-                appState.booksToRead.length,
+                appController.booksToRead.length,
                 onTap: () => _openBookListPage(context, BookCategory.toRead),
               ),
               _buildHorizontalBookList(
                 context,
-                appState.booksToRead,
+                appController.booksToRead,
                 emptyMessage: 'Nessun libro da leggere',
               ),
 
@@ -146,12 +147,12 @@ class ProfileTab extends StatelessWidget {
               _buildSectionHeader(
                 context,
                 '✅ Letti',
-                appState.booksRead.length,
+                appController.booksRead.length,
                 onTap: () => _openBookListPage(context, BookCategory.read),
               ),
               _buildHorizontalBookList(
                 context,
-                appState.booksRead,
+                appController.booksRead,
                 emptyMessage: 'Nessun libro completato',
               ),
             ],
@@ -169,8 +170,8 @@ class ProfileTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSafeAvatar(BuildContext context, AppState appState, double radius, double iconSize) {
-    final hasImage = appState.profileImagePath.isNotEmpty;
+  Widget _buildSafeAvatar(BuildContext context, AppController appController, double radius, double iconSize) {
+    final hasImage = appController.profileImagePath.isNotEmpty;
 
     return Container(
       width: radius * 2,
@@ -182,13 +183,13 @@ class ProfileTab extends StatelessWidget {
       child: ClipOval(
         child: hasImage
             ? Image.file(
-                File(appState.profileImagePath),
+                File(appController.profileImagePath),
                 fit: BoxFit.cover,
                 errorBuilder: (ctx, error, stackTrace) {
                   // Ripristina l'immagine di default se il file è corrotto o eliminato
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (context.mounted) {
-                      context.read<AppState>().setProfileImagePath('');
+                      context.read<AppController>().setProfileImagePath('');
                     }
                   });
                   return Icon(Icons.person, size: iconSize, color: Colors.white);
@@ -204,8 +205,8 @@ class ProfileTab extends StatelessWidget {
   // Dialog modifica profilo (nome + foto)
   // ============================================
   void _showEditProfileDialog(BuildContext context) {
-    final appState = context.read<AppState>();
-    final nameController = TextEditingController(text: appState.userName);
+    final appController = context.read<AppController>();
+    final nameController = TextEditingController(text: appController.userName);
     final ImagePicker picker = ImagePicker();
     
     showDialog(
@@ -213,8 +214,7 @@ class ProfileTab extends StatelessWidget {
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (dialogCtx, setStateDialog) {
-            final appState = dialogCtx.watch<AppState>();
-            final hasImage = appState.profileImagePath.isNotEmpty;
+            final appController = dialogCtx.watch<AppController>();
             return AlertDialog(
               title: const Text('Modifica Profilo'),
               content: SingleChildScrollView(
@@ -226,7 +226,7 @@ class ProfileTab extends StatelessWidget {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          _buildSafeAvatar(dialogCtx, appState, 40, 40),
+                          _buildSafeAvatar(dialogCtx, appController, 40, 40),
                           Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
@@ -268,7 +268,7 @@ class ProfileTab extends StatelessWidget {
                   onPressed: () {
                     final name = nameController.text.trim();
                     if (name.isNotEmpty) {
-                      dialogCtx.read<AppState>().setUserName(name);
+                      dialogCtx.read<AppController>().setUserName(name);
                       Navigator.pop(dialogContext);
                     }
                   },
@@ -310,7 +310,9 @@ class ProfileTab extends StatelessWidget {
                       final fileName = 'profile_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
                       final savedImage = await File(image.path).copy('${appDir.path}/$fileName');
                       
-                      context.read<AppState>().setProfileImagePath(savedImage.path);
+                      if (context.mounted) {
+                        context.read<AppController>().setProfileImagePath(savedImage.path);
+                      }
                       setStateDialog(() {});
                     }
                   } catch (e) {
@@ -328,7 +330,7 @@ class ProfileTab extends StatelessWidget {
                 title: const Text('Rimuovi foto', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  context.read<AppState>().setProfileImagePath('');
+                  context.read<AppController>().setProfileImagePath('');
                   setStateDialog(() {});
                 },
               ),

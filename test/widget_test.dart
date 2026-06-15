@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:book_time/main.dart';
-import 'package:book_time/app_state.dart';
+import 'package:book_time/controllers/app_controller.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -18,7 +18,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     // Build our app and trigger a frame.
-    final appState = AppState();
+    final appState = AppController();
     await appState.loadState();
     
     await tester.pumpWidget(

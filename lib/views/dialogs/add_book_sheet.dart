@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'app_state.dart';
-import 'services/api_service.dart';
-import 'rating_dialog.dart';
+import '../../controllers/app_controller.dart';
+import '../../services/api_service.dart';
+import '../dialogs/rating_dialog.dart';
 
 /// Mostra un bottom sheet per aggiungere un libro alle liste dell'utente.
 /// [parentContext] è il contesto del widget chiamante, usato per mostrare
@@ -86,7 +86,7 @@ void showAddBookSheet(
                     title: const Text('Aggiungi a "Da leggere"'),
                     onTap: () {
                       final messenger = ScaffoldMessenger.of(ctx);
-                      ctx.read<AppState>().addBookToRead(title, author: authors, coverUrl: imageUrl);
+                      ctx.read<AppController>().addBookToRead(title, author: authors, coverUrl: imageUrl);
                       Navigator.pop(ctx);
                       messenger.showSnackBar(const SnackBar(content: Text('Aggiunto a "Da leggere"')));
                       onBookAdded?.call();
@@ -97,7 +97,6 @@ void showAddBookSheet(
                     leading: const Icon(Icons.menu_book, color: Colors.blue),
                     title: const Text('Aggiungi a "In lettura"'),
                     onTap: () {
-                      final pageMessenger = ScaffoldMessenger.of(ctx);
                       Navigator.pop(ctx); // Chiudi il bottom sheet
                       final pagesController = TextEditingController();
                       showDialog(
@@ -123,7 +122,7 @@ void showAddBookSheet(
                               onPressed: () {
                                 final pages = int.tryParse(pagesController.text);
                                 if (pages != null && pages > 0) {
-                                  dialogContext.read<AppState>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl, id: bookKey);
+                                  dialogContext.read<AppController>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl);
                                   Navigator.pop(dialogContext);
                                   ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto a "In lettura"')));
                                   onBookAdded?.call();
@@ -144,7 +143,7 @@ void showAddBookSheet(
                     onTap: () {
                       Navigator.pop(ctx); // Chiudi il bottom sheet
                       showRatingDialog(parentContext, title, (rating) {
-                        parentContext.read<AppState>().addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating);
+                        parentContext.read<AppController>().addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating);
                         ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto ai "Letti"!')));
                         onBookAdded?.call();
                       });

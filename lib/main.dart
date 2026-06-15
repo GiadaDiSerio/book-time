@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'search_page.dart';
-import 'timer_page.dart';
-import 'app_state.dart';
-import 'profile_tab.dart';
-import 'settings_dialog.dart';
+import 'views/pages/search_page.dart';
+import 'views/pages/timer_page.dart';
+import 'controllers/app_controller.dart';
+import 'views/pages/profile_tab.dart';
+import 'views/dialogs/settings_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final appState = AppState();
-  await appState.loadState();
+  final appController = AppController();
+  await appController.loadState();
   runApp(
     ChangeNotifierProvider(
-      create: (context) => appState,
+      create: (context) => appController,
       child: const BookTimeApp(),
     ),
   );
@@ -23,7 +23,7 @@ class BookTimeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final appController = context.watch<AppController>();
     return MaterialApp(
       title: 'Book Time',
       theme: ThemeData(
@@ -37,7 +37,7 @@ class BookTimeApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      themeMode: appState.themeMode,
+      themeMode: appController.themeMode,
       home: const HomePage(),
     );
   }
@@ -57,8 +57,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = context.read<AppState>();
-      if (appState.isFirstLaunch) {
+      final appController = context.read<AppController>();
+      if (appController.isFirstLaunch) {
         _showWelcomeDialog();
       }
     });
@@ -100,7 +100,7 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               final name = nameController.text.trim();
               if (name.isNotEmpty) {
-                context.read<AppState>().setUserName(name);
+                context.read<AppController>().setUserName(name);
                 Navigator.pop(dialogContext);
               }
             },

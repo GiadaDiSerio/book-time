@@ -1,9 +1,8 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/api_service.dart';
-import 'app_state.dart';
-import 'add_book_sheet.dart';
+import '../../services/api_service.dart';
+import '../../controllers/app_controller.dart';
+import '../dialogs/add_book_sheet.dart';
 
 enum SuggestionMode { author, genre }
 
@@ -40,8 +39,8 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
     });
 
     try {
-      final appState = context.read<AppState>();
-      List<String> validAuthors = appState.booksRead
+      final appController = context.read<AppController>();
+      List<String> validAuthors = appController.booksRead
           .where((b) => b.rating >= 4 && b.author != 'Autore sconosciuto')
           .map((b) => b.author)
           .toSet()
@@ -49,9 +48,9 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
 
       if (validAuthors.isEmpty) {
         final allBooks = [
-          ...appState.booksRead,
-          ...appState.booksReading,
-          ...appState.booksToRead,
+          ...appController.booksRead,
+          ...appController.booksReading,
+          ...appController.booksToRead,
         ];
         validAuthors = allBooks
             .map((b) => b.author)
@@ -61,15 +60,15 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
       }
 
       final allMyBookTitles = [
-        ...appState.booksRead.map((b) => b.title.toLowerCase()),
-        ...appState.booksReading.map((b) => b.title.toLowerCase()),
-        ...appState.booksToRead.map((b) => b.title.toLowerCase()),
+        ...appController.booksRead.map((b) => b.title.toLowerCase()),
+        ...appController.booksReading.map((b) => b.title.toLowerCase()),
+        ...appController.booksToRead.map((b) => b.title.toLowerCase()),
       ];
 
       final result = await apiService.fetchSuggestions(
         validAuthors: validAuthors,
         isAuthorMode: widget.mode == SuggestionMode.author,
-        languageCode: appState.languageCode,
+        languageCode: appController.languageCode,
         existingBookTitles: allMyBookTitles,
         specificGenre: widget.specificGenre,
       );

@@ -1,15 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:book_time/app_state.dart';
+import 'package:book_time/controllers/app_controller.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  late AppState appState;
+  late AppController appState;
 
   setUp(() async {
     // Inizializza SharedPreferences con valori vuoti per isolare i test
     SharedPreferences.setMockInitialValues({});
-    appState = AppState();
+    appState = AppController();
     await appState.loadState();
     
     // Pulisce lo stato del singleton prima di ogni test
@@ -25,7 +25,7 @@ void main() {
     appState.setUserName('');
   });
 
-  group('AppState Tests', () {
+  group('AppController Tests', () {
     test('Aggiunta libro a "Da leggere"', () {
       appState.addBookToRead('Il Signore degli Anelli', author: 'J.R.R. Tolkien');
       

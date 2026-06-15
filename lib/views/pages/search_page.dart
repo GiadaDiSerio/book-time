@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/api_service.dart';
-import 'app_state.dart';
-import 'responsive_wrapper.dart';
-import 'suggestions_widget.dart';
-import 'add_book_sheet.dart';
+import '../../services/api_service.dart';
+import '../../controllers/app_controller.dart';
+import '../widgets/responsive_wrapper.dart';
+import '../widgets/suggestions_widget.dart';
+import '../dialogs/add_book_sheet.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -53,8 +53,8 @@ class _SearchPageState extends State<SearchPage> {
     });
 
     try {
-      final appState = context.read<AppState>();
-      final docs = await apiService.searchBooks(query, appState.languageCode);
+      final appController = context.read<AppController>();
+      final docs = await apiService.searchBooks(query, appController.languageCode);
       setState(() {
         _searchResults = docs;
         if (_searchResults.isEmpty) {
@@ -74,7 +74,7 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.watch<AppState>();
+    final appController = context.watch<AppController>();
     return ResponsiveWrapper(
         maxWidth: 700,
         child: Column(
@@ -223,41 +223,41 @@ class _SearchPageState extends State<SearchPage> {
                                   const SizedBox(height: 8),
                                   if (_selectedCategoryIndex == 0) ...[
                                     SuggestionsWidget(
-                                      key: ValueKey('author_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.author,
                                     ),
                                     SuggestionsWidget(
-                                      key: ValueKey('fav_genre_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       specificGenre: 'favorite',
                                       showLoadingIndicator: false,
                                     ),
                                   ] else if (_selectedCategoryIndex == 1) ...[
                                     SuggestionsWidget(
-                                      key: ValueKey('scopri1_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('scopri1_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       showLoadingIndicator: true,
                                     ),
                                     SuggestionsWidget(
-                                      key: ValueKey('gen_thriller_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('gen_thriller_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       specificGenre: 'thriller',
                                       showLoadingIndicator: false,
                                     ),
                                     SuggestionsWidget(
-                                      key: ValueKey('gen_fantasy_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('gen_fantasy_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       specificGenre: 'fantasy',
                                       showLoadingIndicator: false,
                                     ),
                                     SuggestionsWidget(
-                                      key: ValueKey('gen_romanzo_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('gen_romanzo_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       specificGenre: 'romanzo',
                                       showLoadingIndicator: false,
                                     ),
                                     SuggestionsWidget(
-                                      key: ValueKey('gen_scifi_${appState.languageCode}_$_refreshCounter'),
+                                      key: ValueKey('gen_scifi_${appController.languageCode}_$_refreshCounter'),
                                       mode: SuggestionMode.genre,
                                       specificGenre: 'fantascienza',
                                       showLoadingIndicator: false,
