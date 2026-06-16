@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../services/api_service.dart';
-import '../../controllers/app_controller.dart';
 import '../dialogs/add_book_sheet.dart';
 
-enum SuggestionMode { author, genre }
-
 class SuggestionsWidget extends StatefulWidget {
-  final SuggestionMode mode;
-  final String? specificGenre;
-  final bool showLoadingIndicator;
+  final String title;
+  final List<dynamic> suggestions;
+  final bool isLoading;
 
   const SuggestionsWidget({
     super.key,
-    this.mode = SuggestionMode.author,
-    this.specificGenre,
-    this.showLoadingIndicator = true,
+    required this.title,
+    required this.suggestions,
+    this.isLoading = false,
   });
 
   @override
@@ -23,80 +18,32 @@ class SuggestionsWidget extends StatefulWidget {
 }
 
 class _SuggestionsWidgetState extends State<SuggestionsWidget> {
-  List<dynamic> _suggestions = [];
-  bool _isLoading = true;
-  String _suggestionReason = 'Scelti per te';
+  List<dynamic> _localSuggestions = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchSuggestions();
+    _localSuggestions = List.from(widget.suggestions);
   }
 
-  Future<void> _fetchSuggestions() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final appController = context.read<AppController>();
-      List<String> validAuthors = appController.booksRead
-          .where((b) => b.rating >= 4 && b.author != 'Autore sconosciuto')
-          .map((b) => b.author)
-          .toSet()
-          .toList();
-
-      if (validAuthors.isEmpty) {
-        final allBooks = [
-          ...appController.booksRead,
-          ...appController.booksReading,
-          ...appController.booksToRead,
-        ];
-        validAuthors = allBooks
-            .map((b) => b.author)
-            .where((a) => a != 'Autore sconosciuto')
-            .toSet()
-            .toList();
-      }
-
-      final allMyBookTitles = [
-        ...appController.booksRead.map((b) => b.title.toLowerCase()),
-        ...appController.booksReading.map((b) => b.title.toLowerCase()),
-        ...appController.booksToRead.map((b) => b.title.toLowerCase()),
-      ];
-
-      final result = await apiService.fetchSuggestions(
-        validAuthors: validAuthors,
-        isAuthorMode: widget.mode == SuggestionMode.author,
-        languageCode: appController.languageCode,
-        existingBookTitles: allMyBookTitles,
-        specificGenre: widget.specificGenre,
-      );
-
-      if (mounted) {
-        setState(() {
-          _suggestionReason = result[0];
-          _suggestions = result[1];
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+  @override
+  void didUpdateWidget(covariant SuggestionsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.suggestions != widget.suggestions) {
+      _localSuggestions = List.from(widget.suggestions);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return widget.showLoadingIndicator
-          ? const Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : const SizedBox.shrink();
+    if (widget.isLoading) {
+      return const Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
-    if (_suggestions.isEmpty) {
+    if (_localSuggestions.isEmpty) {
       return const SizedBox.shrink(); // Non mostrare nulla se non ci sono suggerimenti
     }
 
@@ -106,7 +53,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
           child: Text(
-            _suggestionReason,
+            widget.title,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -119,9 +66,9 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            itemCount: _suggestions.length,
+            itemCount: _localSuggestions.length,
             itemBuilder: (context, index) {
-              final book = _suggestions[index];
+              final book = _localSuggestions[index];
               final coverId = book['cover_i'];
               final imageUrl = 'https://covers.openlibrary.org/b/id/$coverId-M.jpg';
               final title = book['title'] ?? 'Sconosciuto';
@@ -137,7 +84,7 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                   bookKey: bookKey,
                   onBookAdded: () {
                     setState(() {
-                      _suggestions.remove(book);
+                      _localSuggestions.remove(book);
                     });
                   },
                 ),

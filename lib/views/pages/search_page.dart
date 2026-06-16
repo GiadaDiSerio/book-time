@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
+import '../../services/gemini_service.dart';
 import '../../controllers/app_controller.dart';
 import '../widgets/responsive_wrapper.dart';
 import '../widgets/suggestions_widget.dart';
@@ -15,10 +16,28 @@ class SearchPage extends StatefulWidget {
 }
 
 class _SearchPageState extends State<SearchPage> {
-  // Questo "controller" legge cosa scrive l'utente nella barra di ricerca
   final TextEditingController _searchController = TextEditingController();
-
   Timer? _debounce;
+
+  List<dynamic> _searchResults = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  int _selectedCategoryIndex = 0;
+  final List<String> _categories = ['PER TE', 'SCOPRI'];
+
+  // Cache per i caroselli
+  bool _isLoadingSuggestions = false;
+  List<Map<String, dynamic>> _perTeCarousels = [];
+  List<Map<String, dynamic>> _scopriCarousels = [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchCategoryData(_selectedCategoryIndex);
+    });
+  }
 
   @override
   void dispose() {
@@ -27,20 +46,146 @@ class _SearchPageState extends State<SearchPage> {
     super.dispose();
   }
 
-  // Qui salveremo la lista dei libri trovati
-  List<dynamic> _searchResults = [];
+  Future<void> _fetchCategoryData(int categoryIndex) async {
+    // Evitiamo di ricaricare se abbiamo già i dati e non è un refresh forzato
+    if (categoryIndex == 0 && _perTeCarousels.isNotEmpty) return;
+    if (categoryIndex == 1 && _scopriCarousels.isNotEmpty) return;
 
-  // Questa variabile ci dice se stiamo aspettando i risultati (per mostrare la rotellina di caricamento)
-  bool _isLoading = false;
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
 
-  // Messaggio di errore da mostrare sullo schermo
-  String? _errorMessage;
+    try {
+      final appController = context.read<AppController>();
+      List<String> validAuthors = appController.booksRead
+          .where((b) => b.rating >= 4 && b.author != 'Autore sconosciuto')
+          .map((b) => b.author)
+          .toSet()
+          .toList();
 
-  // Contatore per forzare il refresh dei suggerimenti
-  int _refreshCounter = 0;
+      if (validAuthors.isEmpty) {
+        final allBooks = [
+          ...appController.booksRead,
+          ...appController.booksReading,
+          ...appController.booksToRead,
+        ];
+        validAuthors = allBooks
+            .map((b) => b.author)
+            .where((a) => a != 'Autore sconosciuto')
+            .toSet()
+            .toList();
+      }
 
-  int _selectedCategoryIndex = 0;
-  final List<String> _categories = ['PER TE', 'SCOPRI'];
+      final allMyBookTitles = [
+        ...appController.booksRead.map((b) => b.title.toLowerCase()),
+        ...appController.booksReading.map((b) => b.title.toLowerCase()),
+        ...appController.booksToRead.map((b) => b.title.toLowerCase()),
+      ];
+
+      List<Future<List<dynamic>>> fetchTasks = [];
+
+      if (categoryIndex == 0) { // PER TE
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: true,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+        ));
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+          specificGenre: 'favorite',
+        ));
+      } else { // SCOPRI
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+        ));
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+          specificGenre: 'thriller',
+        ));
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+          specificGenre: 'fantasy',
+        ));
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+          specificGenre: 'romanzo',
+        ));
+        fetchTasks.add(apiService.fetchSuggestions(
+          validAuthors: validAuthors,
+          isAuthorMode: false,
+          languageCode: appController.languageCode,
+          existingBookTitles: allMyBookTitles,
+          specificGenre: 'fantascienza',
+        ));
+      }
+
+      final results = await Future.wait(fetchTasks);
+      
+      // Ora raccogliamo tutti i libri in una singola lista
+      List<dynamic> allBooks = [];
+      for (var result in results) {
+        if (result.length == 2) {
+          allBooks.addAll(result[1] as List<dynamic>);
+        }
+      }
+
+      // 1 SOLA chiamata a Gemini per tradurre tutti i titoli di tutti i caroselli!
+      final translatedBooks = await geminiService.translateSearchDocs(allBooks);
+
+      // Ri-smistiamo i libri nei rispettivi caroselli
+      int pointer = 0;
+      List<Map<String, dynamic>> finalCarousels = [];
+      
+      for (var result in results) {
+        if (result.length == 2) {
+          final String title = result[0];
+          final List<dynamic> originalDocs = result[1];
+          final int count = originalDocs.length;
+          
+          final docsForThisCarousel = translatedBooks.sublist(pointer, pointer + count);
+          finalCarousels.add({
+            'title': title,
+            'docs': docsForThisCarousel,
+          });
+          pointer += count;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          if (categoryIndex == 0) {
+            _perTeCarousels = finalCarousels;
+          } else {
+            _scopriCarousels = finalCarousels;
+          }
+          _isLoadingSuggestions = false;
+        });
+      }
+    } catch (e) {
+      print('Errore fetch category data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingSuggestions = false;
+        });
+      }
+    }
+  }
 
   Future<void> searchBooks(String query) async {
     _debounce?.cancel();
@@ -58,7 +203,7 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _searchResults = docs;
         if (_searchResults.isEmpty) {
-          _errorMessage = 'Nessun libro trovato per "$query"';
+          _errorMessage = 'Nessun libro trovato per "\$query"';
         }
       });
     } catch (e) {
@@ -67,14 +212,13 @@ class _SearchPageState extends State<SearchPage> {
       });
     } finally {
       setState(() {
-        _isLoading = false; // Nascondi il caricamento alla fine
+        _isLoading = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final appController = context.watch<AppController>();
     return ResponsiveWrapper(
         maxWidth: 700,
         child: Column(
@@ -87,7 +231,7 @@ class _SearchPageState extends State<SearchPage> {
               decoration: InputDecoration(
                 labelText: 'Titolo o Autore',
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24), // Makes it more pill-shaped, often looks better when small
+                  borderRadius: BorderRadius.circular(24), 
                 ),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -100,7 +244,6 @@ class _SearchPageState extends State<SearchPage> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          // Simula un onChanged con stringa vuota per resettare i risultati
                           if (_debounce?.isActive ?? false) _debounce!.cancel();
                           setState(() {
                             _searchResults = [];
@@ -131,7 +274,7 @@ class _SearchPageState extends State<SearchPage> {
               onSubmitted: (value) {
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 searchBooks(value);
-              }, // Avvia anche se premo "Invio" sulla tastiera
+              }, 
             ),
           ),
 
@@ -146,9 +289,12 @@ class _SearchPageState extends State<SearchPage> {
                 final isSelected = index == _selectedCategoryIndex;
                 return GestureDetector(
                   onTap: () {
-                    setState(() {
-                      _selectedCategoryIndex = index;
-                    });
+                    if (_selectedCategoryIndex != index) {
+                      setState(() {
+                        _selectedCategoryIndex = index;
+                      });
+                      _fetchCategoryData(index);
+                    }
                   },
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -177,12 +323,12 @@ class _SearchPageState extends State<SearchPage> {
           ),
           ),
 
-          // La lista dei risultati (o errore o caricamento o suggerimenti)
+          // La lista dei risultati o caroselli
           Expanded(
             child: _isLoading
                 ? const Center(
                     child: CircularProgressIndicator(),
-                  ) // Rotellina di caricamento
+                  )
                 : _errorMessage != null
                     ? Center(
                         child: Padding(
@@ -213,65 +359,42 @@ class _SearchPageState extends State<SearchPage> {
                         ? RefreshIndicator(
                             onRefresh: () async {
                               setState(() {
-                                _refreshCounter++;
+                                if (_selectedCategoryIndex == 0) _perTeCarousels.clear();
+                                else _scopriCarousels.clear();
                               });
+                              await _fetchCategoryData(_selectedCategoryIndex);
                             },
                             child: SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  if (_selectedCategoryIndex == 0) ...[
-                                    SuggestionsWidget(
-                                      key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.author,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'favorite',
-                                      showLoadingIndicator: false,
-                                    ),
-                                  ] else if (_selectedCategoryIndex == 1) ...[
-                                    SuggestionsWidget(
-                                      key: ValueKey('scopri1_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      showLoadingIndicator: true,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_thriller_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'thriller',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_fantasy_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'fantasy',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_romanzo_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'romanzo',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_scifi_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'fantascienza',
-                                      showLoadingIndicator: false,
-                                    ),
-                                  ],
+                                  if (_isLoadingSuggestions)
+                                    const Padding(
+                                      padding: EdgeInsets.all(24.0),
+                                      child: Center(child: CircularProgressIndicator()),
+                                    )
+                                  else if (_selectedCategoryIndex == 0)
+                                    ..._perTeCarousels.map((carousel) => SuggestionsWidget(
+                                      title: carousel['title'],
+                                      suggestions: carousel['docs'],
+                                    ))
+                                  else if (_selectedCategoryIndex == 1)
+                                    ..._scopriCarousels.map((carousel) => SuggestionsWidget(
+                                      title: carousel['title'],
+                                      suggestions: carousel['docs'],
+                                    )),
+                                  
                                   const SizedBox(height: 16),
-                                  const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text(
-                                      '↓ Trascina verso il basso per aggiornare i suggerimenti',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  if (!_isLoadingSuggestions)
+                                    const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Text(
+                                        '↓ Trascina verso il basso per aggiornare i suggerimenti',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
                                     ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -281,16 +404,10 @@ class _SearchPageState extends State<SearchPage> {
                             itemBuilder: (context, index) {
                               final book = _searchResults[index];
 
-                          // Estraiamo i dati da Open Library
-                          // I campi sono diversi da Google Books:
-                          // - 'title' per il titolo
-                          // - 'author_name' per gli autori (è una lista)
-                          // - 'cover_i' per l'ID della copertina
                           final title = book['title'] ?? 'Titolo sconosciuto';
                           final authors = (book['author_name'] as List?)
                                   ?.join(', ') ??
                               'Autore sconosciuto';
-                          // La copertina si costruisce così con Open Library
                           final coverId = book['cover_i'];
                           final imageUrl = coverId != null
                               ? 'https://covers.openlibrary.org/b/id/$coverId-M.jpg'
@@ -302,7 +419,6 @@ class _SearchPageState extends State<SearchPage> {
                                     imageUrl,
                                     width: 50,
                                     fit: BoxFit.cover,
-                                    // Se l'immagine non si carica, mostra un'icona
                                     errorBuilder: (context, error, stackTrace) =>
                                         const Icon(Icons.book, size: 50),
                                   )
@@ -315,7 +431,7 @@ class _SearchPageState extends State<SearchPage> {
                             subtitle: Text(authors),
                             trailing: const Icon(
                               Icons.add_circle_outline,
-                            ), // Pulsante per aggiungere
+                            ), 
                             onTap: () {
                               final bookKey = book['key'];
                               showAddBookSheet(

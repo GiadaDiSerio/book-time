@@ -15,7 +15,7 @@ class GeminiService {
       throw Exception('Nessuna GEMINI_API_KEY trovata nel file .env');
     }
     _model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       apiKey: apiKey,
     );
   }
@@ -68,8 +68,8 @@ ${jsonEncode(toTranslate.map((e) => {"index": e["index"], "title": e["title"], "
       final response = await _model.generateContent([Content.text(promptStr)]);
       String responseText = response.text ?? '[]';
       
-      // Puliamo la risposta nel caso Gemini aggiunga blocchi markdown
-      responseText = responseText.replaceAll('```json', '').replaceAll('```', '').trim();
+      // Estraiamo il JSON puro dalla risposta (gestisce markdown, thinking, testo extra)
+      responseText = _extractJsonArray(responseText);
       
       final List<dynamic> resultList = jsonDecode(responseText);
       
@@ -123,6 +123,24 @@ Assicurati di rispondere SOLO con la trama in italiano e nessun testo introdutti
           ? fallbackPlot 
           : 'Impossibile generare la trama a causa di un errore (forse limite richieste).';
     }
+  }
+
+  /// Estrae un array JSON puro da una risposta potenzialmente sporca
+  /// (con markdown, thinking, testo extra, ecc.)
+  String _extractJsonArray(String raw) {
+    // Prima puliamo eventuali blocchi markdown
+    raw = raw.replaceAll(RegExp(r'```json\s*', caseSensitive: false), '');
+    raw = raw.replaceAll(RegExp(r'```\s*'), '');
+    raw = raw.trim();
+    
+    // Cerchiamo il primo array JSON valido nella risposta
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(raw);
+    if (match != null) {
+      return match.group(0)!;
+    }
+    
+    // Se non troviamo nulla, restituiamo un array vuoto
+    return '[]';
   }
 }
 

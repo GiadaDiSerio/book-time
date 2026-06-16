@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
 import 'gemini_service.dart';
+import 'translation_service.dart';
 
 /// Servizio dedicato alle chiamate verso l'API di Open Library.
 /// Separa la logica di rete dall'interfaccia utente (SoC).
@@ -13,7 +14,7 @@ class ApiService {
     if (query.isEmpty) return [];
 
     final url = Uri.parse(
-      '$_baseUrl/search.json?q=${Uri.encodeComponent(query)}&language=$languageCode&limit=20',
+      '$_baseUrl/search.json?q=${Uri.encodeComponent(query)}&language=$languageCode&limit=10',
     );
 
     try {
@@ -37,7 +38,7 @@ class ApiService {
 
   /// Recupera la descrizione di un libro dalla sua chiave
   Future<String> fetchBookPlotByKey(String? bookKey, String title, String author) async {
-    if (bookKey == null) return await geminiService.generateItalianPlot(title, author, 'Nessuna trama disponibile.');
+    if (bookKey == null) return await translationService.translatePlot('Nessuna trama disponibile.');
 
     try {
       final url = Uri.parse('$_baseUrl$bookKey.json');
@@ -53,12 +54,12 @@ class ApiService {
             fallbackPlot = data['description']['value'];
           }
         }
-        return await geminiService.generateItalianPlot(title, author, fallbackPlot);
+        return await translationService.translatePlot(fallbackPlot);
       } else {
-        return await geminiService.generateItalianPlot(title, author, 'Impossibile caricare la trama originale.');
+        return await translationService.translatePlot('Impossibile caricare la trama originale.');
       }
     } catch (e) {
-      return await geminiService.generateItalianPlot(title, author, 'Errore durante il caricamento della trama.');
+      return await translationService.translatePlot('Errore durante il caricamento della trama.');
     }
   }
 
@@ -79,12 +80,12 @@ class ApiService {
             return await fetchBookPlotByKey(bookKey, title, author);
           }
         }
-        return await geminiService.generateItalianPlot(title, author, 'Nessuna trama disponibile.');
+        return await translationService.translatePlot('Nessuna trama disponibile.');
       } else {
-        return await geminiService.generateItalianPlot(title, author, 'Impossibile caricare la trama.');
+        return await translationService.translatePlot('Impossibile caricare la trama.');
       }
     } catch (e) {
-      return await geminiService.generateItalianPlot(title, author, 'Errore durante il caricamento della trama.');
+      return await translationService.translatePlot('Errore durante il caricamento della trama.');
     }
   }
 
@@ -137,6 +138,7 @@ class ApiService {
           return hasCover && !existingBookTitles.contains(title);
         }).take(8).toList();
 
+        // I titoli dei suggerimenti restano in originale per non saturare le API di Gemini
         return [suggestionReason, filteredDocs];
       }
       return [suggestionReason, []];
