@@ -42,6 +42,24 @@ class _SearchPageState extends State<SearchPage> {
   int _selectedCategoryIndex = 0;
   final List<String> _categories = ['PER TE', 'SCOPRI'];
 
+  final List<String> _allSubjects = [
+    'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
+    'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
+    'arte', 'scienza', 'psicologia', 'classici', 'romanzi rosa',
+  ];
+  List<String> _currentScopriGenres = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _generateScopriGenres();
+  }
+
+  void _generateScopriGenres() {
+    final copy = List<String>.from(_allSubjects)..shuffle();
+    _currentScopriGenres = copy.take(5).toList();
+  }
+
   Future<void> searchBooks(String query) async {
     _debounce?.cancel();
     if (query.isEmpty) return;
@@ -214,6 +232,7 @@ class _SearchPageState extends State<SearchPage> {
                             onRefresh: () async {
                               setState(() {
                                 _refreshCounter++;
+                                _generateScopriGenres();
                               });
                             },
                             child: SingleChildScrollView(
@@ -233,35 +252,13 @@ class _SearchPageState extends State<SearchPage> {
                                       showLoadingIndicator: false,
                                     ),
                                   ] else if (_selectedCategoryIndex == 1) ...[
-                                    SuggestionsWidget(
-                                      key: ValueKey('scopri1_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      showLoadingIndicator: true,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_thriller_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'thriller',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_fantasy_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'fantasy',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_romanzo_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'romanzo',
-                                      showLoadingIndicator: false,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('gen_scifi_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'fantascienza',
-                                      showLoadingIndicator: false,
-                                    ),
+                                    for (int i = 0; i < _currentScopriGenres.length; i++)
+                                      SuggestionsWidget(
+                                        key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: _currentScopriGenres[i],
+                                        showLoadingIndicator: i == 0,
+                                      ),
                                   ],
                                   const SizedBox(height: 16),
                                   const Padding(

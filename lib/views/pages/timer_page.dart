@@ -168,124 +168,147 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
   void _showManualTimeDialog() {
     final hoursController = TextEditingController();
     final minutesController = TextEditingController();
-    final scrollController = ScrollController();
-
-    // Funzione per scrollare in fondo quando si tocca un campo
-    void scrollToBottom() {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (scrollController.hasClients) {
-          scrollController.animateTo(
-            scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
 
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Aggiungi tempo manualmente'),
-        content: SingleChildScrollView(
-          controller: scrollController,
-          reverse: true, // Parte dal basso: i campi sono subito visibili
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Hai dimenticato il cronometro?\nInserisci quanto tempo hai letto:',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  // Campo ore
-                  Expanded(
-                    child: TextField(
-                      controller: hoursController,
-                      keyboardType: TextInputType.number,
+      builder: (dialogContext) {
+        String? hoursError;
+        String? minutesError;
+
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Aggiungi tempo manualmente'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Hai dimenticato il cronometro?\nInserisci quanto tempo hai letto:',
                       textAlign: TextAlign.center,
-                      onTap: scrollToBottom,
-                      decoration: InputDecoration(
-                        labelText: 'Ore',
-                        hintText: '0',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
+                      style: TextStyle(color: Colors.grey, fontSize: 14),
                     ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(':', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  ),
-                  // Campo minuti
-                  Expanded(
-                    child: TextField(
-                      controller: minutesController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      onTap: scrollToBottom,
-                      decoration: InputDecoration(
-                        labelText: 'Minuti',
-                        hintText: '30',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 20),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Campo ore
+                        Expanded(
+                          child: TextField(
+                            controller: hoursController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            onChanged: (_) {
+                              if (hoursError != null) setStateDialog(() => hoursError = null);
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Ore',
+                              hintText: '0',
+                              errorText: hoursError,
+                              errorMaxLines: 4,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          child: Text(':', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                        ),
+                        // Campo minuti
+                        Expanded(
+                          child: TextField(
+                            controller: minutesController,
+                            keyboardType: TextInputType.number,
+                            textAlign: TextAlign.center,
+                            onChanged: (_) {
+                              if (minutesError != null) setStateDialog(() => minutesError = null);
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Minuti',
+                              hintText: '30',
+                              errorText: minutesError,
+                              errorMaxLines: 4,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('ANNULLA'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final hours = int.tryParse(hoursController.text) ?? 0;
-              final minutes = int.tryParse(minutesController.text) ?? 0;
-              final totalSeconds = (hours * 3600) + (minutes * 60);
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('ANNULLA'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    
+                    final hours = int.tryParse(hoursController.text) ?? 0;
+                    final minutes = int.tryParse(minutesController.text) ?? 0;
+                    final totalSeconds = (hours * 3600) + (minutes * 60);
 
-              if (totalSeconds > 86400) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('❌ Non puoi aggiungere più di 24 ore alla volta!'),
-                    backgroundColor: Colors.red,
+                    bool hasError = false;
+                    String? newMinutesError;
+                    String? newHoursError;
+
+                    if (minutes > 59) {
+                      newMinutesError = 'Max: 59';
+                      hasError = true;
+                    }
+
+                    if (totalSeconds > 86400) {
+                      newHoursError = 'Max: 24';
+                      hasError = true;
+                    }
+
+                    if (hasError) {
+                      setStateDialog(() {
+                        minutesError = newMinutesError;
+                        hoursError = newHoursError;
+                      });
+                      return;
+                    }
+
+                    if (totalSeconds > 0) {
+                      context.read<AppController>().addReadingTime(totalSeconds);
+                      Navigator.pop(dialogContext);
+
+                      // Mostra conferma
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Aggiunto: ${hours > 0 ? '${hours}h ' : ''}${minutes}m alle tue statistiche!',
+                          ),
+                          backgroundColor: Colors.green,
+                          action: SnackBarAction(
+                            label: 'ANNULLA',
+                            textColor: Colors.white,
+                            onPressed: () {
+                              context.read<AppController>().removeReadingTime(totalSeconds);
+                            },
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
                   ),
-                );
-                return;
-              }
-
-              if (totalSeconds > 0) {
-                context.read<AppController>().addReadingTime(totalSeconds);
-                Navigator.pop(dialogContext);
-
-                // Mostra conferma
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '✅ Aggiunto: ${hours > 0 ? '${hours}h ' : ''}${minutes}m alle tue statistiche!',
-                    ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('AGGIUNGI'),
-          ),
-        ],
-      ),
+                  child: const Text('AGGIUNGI'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

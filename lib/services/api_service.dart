@@ -99,13 +99,17 @@ class ApiService {
     final subjects = [
       'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
       'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
-      'filosofia', 'arte', 'scienza', 'psicologia', 'classici',
+      'arte', 'scienza', 'psicologia', 'classici', 'romanzi rosa',
     ];
 
     if (specificGenre == 'favorite') {
       final randomSubject = subjects[Random().nextInt(subjects.length)];
       query = 'subject=${Uri.encodeComponent(randomSubject)}';
-      suggestionReason = 'Siccome ti piace il ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+      if (existingBookTitles.isEmpty) {
+        suggestionReason = 'In evidenza: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+      } else {
+        suggestionReason = 'Siccome ti piace il genere ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+      }
     } else if (specificGenre != null) {
       query = 'subject=${Uri.encodeComponent(specificGenre)}';
       suggestionReason = '${specificGenre[0].toUpperCase()}${specificGenre.substring(1)}';

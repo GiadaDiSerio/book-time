@@ -142,6 +142,13 @@ class AppController extends ChangeNotifier {
     notifyListeners(); // Avvisa l'interfaccia di aggiornarsi
   }
 
+  void removeReadingTime(int seconds) {
+    _totalReadingSeconds -= seconds;
+    if (_totalReadingSeconds < 0) _totalReadingSeconds = 0;
+    saveState();
+    notifyListeners();
+  }
+
   // Controlla se un libro è già presente in una qualsiasi lista (per titolo, usato solo all'aggiunta)
   bool _isBookInAnyList(String title) {
     return _booksToRead.any((b) => b.title == title) ||
