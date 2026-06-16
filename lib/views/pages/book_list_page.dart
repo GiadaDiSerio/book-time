@@ -26,11 +26,11 @@ class _BookListPageState extends State<BookListPage> {
   String get _title {
     switch (widget.category) {
       case BookCategory.reading:
-        return '📖 In lettura';
+        return 'In lettura';
       case BookCategory.toRead:
-        return '📚 Da leggere';
+        return 'Da leggere';
       case BookCategory.read:
-        return '✅ Letti';
+        return 'Letti';
     }
   }
 
@@ -61,63 +61,114 @@ class _BookListPageState extends State<BookListPage> {
 
   void _showUpdateProgressDialog(Book book) {
     final controller = TextEditingController(text: '${book.currentPage}');
+    final scrollController = ScrollController();
+    String? errorMessage;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Aggiorna "${book.title}"'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Pagine totali: ${book.totalPages}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'A che pagina sei arrivato?',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                hintText: 'Es: ${book.totalPages}',
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('ANNULLA'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final page = int.tryParse(controller.text) ?? book.currentPage;
-              final clampedPage = page.clamp(0, book.totalPages);
-              final appController = context.read<AppController>();
-              bool completed = appController.updateReadingProgress(book.id, clampedPage);
-              Navigator.pop(ctx);
-              if (completed) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '🎉 Complimenti! Hai finito "${book.title}"!',
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setStateDialog) {
+            return AlertDialog(
+              title: Text('Aggiorna "${book.title}"'),
+              content: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Pagine totali: ${book.totalPages}'),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'A che pagina sei arrivato?',
+                        errorText: errorMessage,
+                        errorMaxLines: 4, // Permette all'errore di andare a capo ed essere completamente visibile
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        hintText: 'Es: ${book.totalPages}',
+                      ),
+                      autofocus: true,
+                      onChanged: (_) {
+                        if (errorMessage != null) {
+                          setStateDialog(() => errorMessage = null);
+                        }
+                      },
                     ),
-                    backgroundColor: Colors.green,
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('ANNULLA'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    final page = int.tryParse(controller.text);
+                    if (page == null) return;
+
+                    if (page > book.totalPages) {
+                      setStateDialog(() {
+                        errorMessage = 'Il numero di pagine lette non può superare il totale (${book.totalPages}).';
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (scrollController.hasClients) {
+                          scrollController.animateTo(
+                            scrollController.position.maxScrollExtent,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      });
+                      return;
+                    }
+                    if (page < 0) {
+                      setStateDialog(() {
+                        errorMessage = 'Il numero non può essere negativo.';
+                      });
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (scrollController.hasClients) {
+                          scrollController.animateTo(
+                            scrollController.position.maxScrollExtent,
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
+                        }
+                      });
+                      return;
+                    }
+
+                    final appController = context.read<AppController>();
+                    bool completed = appController.updateReadingProgress(book.id, page);
+                    Navigator.pop(ctx);
+                    if (completed) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            '🎉 Complimenti! Hai finito "${book.title}"!',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                      showRatingDialog(context, book.title, (rating) {
+                        if (rating > 0) context.read<AppController>().rateBook(book.id, rating);
+                      });
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
                   ),
-                );
-                showRatingDialog(context, book.title, (rating) {
-                  if (rating > 0) context.read<AppController>().rateBook(book.id, rating);
-                });
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('SALVA'),
-          ),
-        ],
-      ),
+                  child: const Text('SALVA'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -482,7 +533,7 @@ class _BookListPageState extends State<BookListPage> {
                     context.read<AppController>().moveBookToToRead(book.id);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('📚 "${book.title}" spostato in "Da leggere"'),
+                        content: Text('"${book.title}" spostato in "Da leggere"'),
                       ),
                     );
                   },
@@ -508,7 +559,7 @@ class _BookListPageState extends State<BookListPage> {
                       context.read<AppController>().moveBookToRead(book.id, rating: rating);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('✅ "${book.title}" spostato in "Letti"'),
+                          content: Text('"${book.title}" spostato in "Letti"'),
                         ),
                       );
                     });
@@ -567,7 +618,7 @@ class _BookListPageState extends State<BookListPage> {
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('📖 "${book.title}" spostato in "In lettura"'),
+                    content: Text('"${book.title}" spostato in "In lettura"'),
                   ),
                 );
               }

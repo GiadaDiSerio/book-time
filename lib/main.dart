@@ -71,7 +71,7 @@ class _HomePageState extends State<HomePage> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Benvenuto su Book Time! 📚'),
+        title: const Text('Benvenuto su Book Time!'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

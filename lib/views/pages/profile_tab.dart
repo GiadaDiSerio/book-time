@@ -60,15 +60,6 @@ class ProfileTab extends StatelessWidget {
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              '📚 Lettore appassionato',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
                           ],
                         ),
                       ),
@@ -111,7 +102,7 @@ class ProfileTab extends StatelessWidget {
               // ==========================================
               _buildSectionHeader(
                 context,
-                '📖 In lettura',
+                'In lettura',
                 appController.booksReading.length,
                 onTap: () => _openBookListPage(context, BookCategory.reading),
               ),
@@ -129,7 +120,7 @@ class ProfileTab extends StatelessWidget {
               // ==========================================
               _buildSectionHeader(
                 context,
-                '📚 Da leggere',
+                'Da leggere',
                 appController.booksToRead.length,
                 onTap: () => _openBookListPage(context, BookCategory.toRead),
               ),
@@ -146,7 +137,7 @@ class ProfileTab extends StatelessWidget {
               // ==========================================
               _buildSectionHeader(
                 context,
-                '✅ Letti',
+                'Letti',
                 appController.booksRead.length,
                 onTap: () => _openBookListPage(context, BookCategory.read),
               ),
