@@ -30,7 +30,7 @@ void showAddBookSheet(
           // Fetch trama al primo avvio
           if (isLoadingPlot) {
             isLoadingPlot = false;
-            apiService.fetchBookPlotByKey(bookKey).then((fetchedPlot) {
+            apiService.fetchBookPlotByKey(bookKey, title, authors).then((fetchedPlot) {
               if (ctx.mounted) {
                 setStateBottomSheet(() {
                   plot = fetchedPlot;

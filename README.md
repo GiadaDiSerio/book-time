@@ -70,3 +70,8 @@ If you want to run this app locally, follow these steps:
    ```bash
    flutter run
    ```
+## Setup AI
+Questa app utilizza Gemini API per tradurre i titoli e generare le trame dei libri da Open Library.
+1. Ottieni una chiave API da Google AI Studio.
+2. Crea un file .env nella cartella root.
+3. Inserisci la tua chiave nel file: GEMINI_API_KEY=la_tua_chiave_qui.

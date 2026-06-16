@@ -5,9 +5,11 @@ import 'views/pages/timer_page.dart';
 import 'controllers/app_controller.dart';
 import 'views/pages/profile_tab.dart';
 import 'views/dialogs/settings_dialog.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   final appController = AppController();
   await appController.loadState();
   runApp(
