@@ -15,7 +15,7 @@ class GeminiService {
       throw Exception('Nessuna GEMINI_API_KEY trovata nel file .env');
     }
     _model = GenerativeModel(
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       apiKey: apiKey,
     );
   }
@@ -54,11 +54,14 @@ class GeminiService {
 
     // Costruiamo il prompt rigoroso
     final promptStr = """
-Sei un traduttore esperto di letteratura.
-Ti fornirò un elenco JSON di libri (titolo e autore originali).
-Devi restituire l'elenco in JSON in cui la chiave "title" contiene il TITOLO UFFICIALE in italiano di quel libro.
-Se non esiste un'edizione italiana nota, traduci letteralmente il titolo.
-Restituisci SOLO codice JSON valido in questo formato: [{"index": X, "title": "Titolo Tradotto"}] e nessuna formattazione markdown (niente ```json).
+You are a tool that translates book titles and authors into Italian. 
+I will provide you with a list of books in JSON format, each with an "index", "title", and "author".
+You must search online for the OFFICIAL ITALIAN title of each book. If an official Italian edition exists, return that title.
+*rules*: 
+- Return the list in JSON format where the "title" key contains the OFFICIAL ITALIAN title of that book.
+- Do not change the "index" or "author" fields.
+- Return ONLY valid JSON code in this format: [{"index": X, "title": "Translated Title"}] and no markdown formatting (no ```json).
+- Do not add any extra text, explanations, or comments.
 
 Libri:
 ${jsonEncode(toTranslate.map((e) => {"index": e["index"], "title": e["title"], "author": e["author"]}).toList())}
@@ -92,37 +95,6 @@ ${jsonEncode(toTranslate.map((e) => {"index": e["index"], "title": e["title"], "
     }
 
     return translatedDocs;
-  }
-
-  /// Genera una trama coinvolgente in italiano
-  Future<String> generateItalianPlot(String title, String author, String fallbackPlot) async {
-    final key = '$title - $author';
-    
-    if (_plotCache.containsKey(key)) {
-      return _plotCache[key]!;
-    }
-
-    final promptStr = """
-Scrivi una sinossi avvincente, senza spoiler e ben formattata in paragrafi (in italiano) per il seguente libro.
-Titolo: $title
-Autore: $author
-Trama originale (potrebbe essere vuota o asettica): $fallbackPlot
-
-Assicurati di rispondere SOLO con la trama in italiano e nessun testo introduttivo.
-""";
-
-    try {
-      final response = await _model.generateContent([Content.text(promptStr)]);
-      final plot = response.text?.trim() ?? 'Impossibile generare la trama al momento.';
-      
-      _plotCache[key] = plot;
-      return plot;
-    } catch (e) {
-      print('Errore in Gemini durante la generazione della trama: $e');
-      return fallbackPlot.isNotEmpty && fallbackPlot != 'Nessuna trama disponibile.' 
-          ? fallbackPlot 
-          : 'Impossibile generare la trama a causa di un errore (forse limite richieste).';
-    }
   }
 
   /// Estrae un array JSON puro da una risposta potenzialmente sporca

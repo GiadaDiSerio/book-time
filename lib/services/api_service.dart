@@ -138,7 +138,6 @@ class ApiService {
           return hasCover && !existingBookTitles.contains(title);
         }).take(8).toList();
 
-        // I titoli dei suggerimenti restano in originale per non saturare le API di Gemini
         return [suggestionReason, filteredDocs];
       }
       return [suggestionReason, []];
