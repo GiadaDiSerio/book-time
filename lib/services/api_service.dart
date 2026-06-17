@@ -150,7 +150,7 @@ class ApiService {
         for (final title in titlesToTry.take(5)) {
           try {
             // Cerchiamo fino a 3 edizioni per essere sicuri di trovarne una con i 'subject'
-            final subjectUrl = Uri.parse('$_baseUrl/search.json?title=${Uri.encodeComponent(title)}&limit=3');
+            final subjectUrl = Uri.parse('$_baseUrl/search.json?title=${Uri.encodeComponent(title)}&limit=3&fields=subject');
             final subResp = await http.get(subjectUrl);
             if (subResp.statusCode == 200) {
               final data = json.decode(subResp.body);
@@ -187,19 +187,42 @@ class ApiService {
         if (foundMatch) {
           // Capitalizziamo la prima lettera
           String displaySubject = '${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
-          suggestionReason = 'Perché hai letto "$matchedBookTitle": $displaySubject';
+          suggestionReason = 'Perché hai letto "$matchedBookTitle"';
         } else {
-          // Se anche dopo 5 libri non troviamo nulla di mappato, proponiamo un bestseller invece di un genere a caso
-          query = 'subject=best_sellers';
-          suggestionReason = 'I più popolari tra i lettori';
+          // Se anche dopo 5 libri non troviamo nulla di mappato, proponiamo un genere a caso
+          final randomSubject = subjects[Random().nextInt(subjects.length)];
+          final englishSubjectForQuery = genreTranslations[randomSubject] ?? randomSubject;
+          query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
+          suggestionReason = 'Ti potrebbe piacere: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
         }
       } else {
         final englishSubjectForQuery = genreTranslations[selectedSubject] ?? selectedSubject;
         query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
-        suggestionReason = 'Forse ti piace: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
+        suggestionReason = 'Ti potrebbe piacere: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
       }
     } else if (specificGenre != null) {
-      if (specificGenre == 'trending') {
+      if (specificGenre == 'new_releases') {
+        final randomSubject = subjects[Random().nextInt(subjects.length)];
+        final englishSubjectForQuery = genreTranslations[randomSubject] ?? randomSubject;
+        query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}&sort=new';
+        suggestionReason = 'Nuove uscite da scoprire';
+      } else if (specificGenre == 'short_reads') {
+        query = 'subject=short_stories';
+        suggestionReason = 'Letture veloci e racconti';
+      } else if (specificGenre == 'mood') {
+        final moods = {
+          'Rilassati con un po\' di umorismo': 'humor',
+          'Un tocco di romanticismo': 'romance',
+          'Adrenalina pura': 'thriller',
+          'Un viaggio in un altro mondo': 'fantasy',
+          'Riflessioni profonde': 'philosophy'
+        };
+        final moodKeys = moods.keys.toList();
+        final selectedMoodLabel = moodKeys[Random().nextInt(moodKeys.length)];
+        final moodSubject = moods[selectedMoodLabel]!;
+        query = 'subject=${Uri.encodeComponent(moodSubject)}';
+        suggestionReason = selectedMoodLabel;
+      } else if (specificGenre == 'trending') {
         query = 'subject=best_sellers';
         suggestionReason = 'I più popolari del momento';
       } else if (specificGenre == 'classic') {
@@ -225,7 +248,7 @@ class ApiService {
       suggestionReason = '${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
     }
 
-    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=40');
+    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=40&fields=key,title,author_name,cover_i');
     
     try {
       final response = await http.get(url);
@@ -237,14 +260,16 @@ class ApiService {
           final title = (book['title'] ?? '').toString().toLowerCase();
           final hasCover = book['cover_i'] != null;
           return hasCover && !existingBookTitles.contains(title);
-        }).take(8).toList();
+        }).toList();
+        filteredDocs.shuffle();
+        filteredDocs = filteredDocs.take(5).toList();
 
         // Fallback: se dopo il filtro i risultati sono zero, peschiamo un genere casuale
         if (filteredDocs.isEmpty) {
           final randomSubject = subjects[Random().nextInt(subjects.length)];
           final englishSubjectForQuery = genreTranslations[randomSubject] ?? randomSubject;
           final fallbackQuery = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
-          final fallbackUrl = Uri.parse('$_baseUrl/search.json?$fallbackQuery&language=$languageCode&limit=40');
+          final fallbackUrl = Uri.parse('$_baseUrl/search.json?$fallbackQuery&language=$languageCode&limit=40&fields=key,title,author_name,cover_i');
           final fallbackResponse = await http.get(fallbackUrl);
           
           if (fallbackResponse.statusCode == 200) {
@@ -254,8 +279,10 @@ class ApiService {
               final title = (book['title'] ?? '').toString().toLowerCase();
               final hasCover = book['cover_i'] != null;
               return hasCover && !existingBookTitles.contains(title);
-            }).take(8).toList();
-            suggestionReason = 'Forse ti piace: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+            }).toList();
+            filteredDocs.shuffle();
+            filteredDocs = filteredDocs.take(5).toList();
+            suggestionReason = 'Ti potrebbe piacere: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
           }
         }
 

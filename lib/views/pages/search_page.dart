@@ -18,6 +18,9 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   // Questo "controller" legge cosa scrive l'utente nella barra di ricerca
   final TextEditingController _searchController = TextEditingController();
+  
+  // Controller per gestire lo scroll della pagina dei suggerimenti
+  final ScrollController _scrollController = ScrollController();
 
   Timer? _debounce;
 
@@ -26,6 +29,7 @@ class _SearchPageState extends State<SearchPage> {
     _debounce?.cancel();
     _timeoutTimer?.cancel();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -53,6 +57,7 @@ class _SearchPageState extends State<SearchPage> {
     'young adult', 'distopia', 'architettura', 'true crime', 'fotografia',
   ];
   List<String> _currentScopriGenres = [];
+  List<String> _currentPerTeExtraSections = [];
 
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   int _loadingWidgetsCount = 0;
@@ -113,8 +118,25 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   void _generateScopriGenres() {
-    final copy = List<String>.from(_allSubjects)..shuffle();
+    final copy = List<String>.from(_allSubjects)
+      ..removeWhere((genre) => _currentScopriGenres.contains(genre))
+      ..shuffle();
     _currentScopriGenres = copy.take(5).toList();
+
+    bool hasBooks = false;
+    try {
+      final appController = context.read<AppController>();
+      hasBooks = appController.booksRead.isNotEmpty || 
+                 appController.booksToRead.isNotEmpty || 
+                 appController.booksReading.isNotEmpty;
+    } catch (_) {}
+
+    final pool = ['new_releases', 'short_reads', 'mood']..shuffle();
+    if (hasBooks) {
+      _currentPerTeExtraSections = ['author', 'favorite', pool.first]..shuffle();
+    } else {
+      _currentPerTeExtraSections = pool.take(3).toList();
+    }
   }
 
   Future<void> searchBooks(String query) async {
@@ -228,6 +250,9 @@ class _SearchPageState extends State<SearchPage> {
                       return GestureDetector(
                         onTap: () {
                           if (_selectedCategoryIndex == index) return;
+                          if (_scrollController.hasClients) {
+                            _scrollController.jumpTo(0);
+                          }
                           setState(() {
                             _selectedCategoryIndex = index;
                             _loadingWidgetsCount = 0;
@@ -314,6 +339,7 @@ class _SearchPageState extends State<SearchPage> {
                               return _refreshCompleter!.future;
                             },
                             child: SingleChildScrollView(
+                              controller: _scrollController,
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: Column(
                                 children: [
@@ -353,41 +379,39 @@ class _SearchPageState extends State<SearchPage> {
                                           ),
                                         ),
                                       ),
-                                      SuggestionsWidget(
-                                        key: ValueKey('pop_trending_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.genre,
-                                        specificGenre: 'trending',
-                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                        onHasResults: _onSuggestionsResultChanged,
-                                      ),
-                                      SuggestionsWidget(
-                                        key: ValueKey('pop_classic_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.genre,
-                                        specificGenre: 'classic',
-                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                        onHasResults: _onSuggestionsResultChanged,
-                                      ),
-                                      SuggestionsWidget(
-                                        key: ValueKey('pop_page_turner_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.genre,
-                                        specificGenre: 'page_turner',
-                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                        onHasResults: _onSuggestionsResultChanged,
-                                      ),
+                                      for (int i = 0; i < _currentPerTeExtraSections.length; i++)
+                                        SuggestionsWidget(
+                                          key: ValueKey('pop_${_currentPerTeExtraSections[i]}_${appController.languageCode}_$_refreshCounter'),
+                                          mode: SuggestionMode.genre,
+                                          specificGenre: _currentPerTeExtraSections[i],
+                                          onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                          onHasResults: _onSuggestionsResultChanged,
+                                        ),
                                     ] else ...[
-                                      SuggestionsWidget(
-                                        key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.author,
-                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                        onHasResults: _onSuggestionsResultChanged,
-                                      ),
-                                      SuggestionsWidget(
-                                        key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.genre,
-                                        specificGenre: 'favorite',
-                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                        onHasResults: _onSuggestionsResultChanged,
-                                      ),
+                                      for (int i = 0; i < _currentPerTeExtraSections.length; i++)
+                                        if (_currentPerTeExtraSections[i] == 'author')
+                                          SuggestionsWidget(
+                                            key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
+                                            mode: SuggestionMode.author,
+                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                            onHasResults: _onSuggestionsResultChanged,
+                                          )
+                                        else if (_currentPerTeExtraSections[i] == 'favorite')
+                                          SuggestionsWidget(
+                                            key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
+                                            mode: SuggestionMode.genre,
+                                            specificGenre: 'favorite',
+                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                            onHasResults: _onSuggestionsResultChanged,
+                                          )
+                                        else
+                                          SuggestionsWidget(
+                                            key: ValueKey('${_currentPerTeExtraSections[i]}_${appController.languageCode}_$_refreshCounter'),
+                                            mode: SuggestionMode.genre,
+                                            specificGenre: _currentPerTeExtraSections[i],
+                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                            onHasResults: _onSuggestionsResultChanged,
+                                          ),
                                     ],
                                   ] else if (_selectedCategoryIndex == 1) ...[
                                     for (int i = 0; i < _currentScopriGenres.length; i++)
