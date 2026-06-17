@@ -4,7 +4,7 @@ class Book {
   final String id; // Identificatore univoco del libro
   final String title;
   final String author;
-  final int totalPages;
+  int totalPages;
   int currentPage; // La pagina a cui sei arrivato
   final String? coverUrl;
   int rating;

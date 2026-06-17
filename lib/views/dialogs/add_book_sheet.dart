@@ -101,38 +101,55 @@ void showAddBookSheet(
                       final pagesController = TextEditingController();
                       showDialog(
                         context: parentContext,
-                        builder: (dialogContext) => AlertDialog(
-                          title: const Text('Quante pagine ha il libro?'),
-                          content: TextField(
-                            controller: pagesController,
-                            keyboardType: TextInputType.number,
-                            autofocus: true,
-                            decoration: InputDecoration(
-                              labelText: 'Numero di pagine',
-                              hintText: 'Es: 350',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        builder: (dialogContext) {
+                          String? errorMessage;
+                          return StatefulBuilder(
+                            builder: (ctx, setStateDialog) => AlertDialog(
+                              title: const Text('Quante pagine ha il libro?'),
+                              content: TextField(
+                                controller: pagesController,
+                                keyboardType: TextInputType.number,
+                                autofocus: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Numero di pagine',
+                                  hintText: 'Es: 350',
+                                  errorText: errorMessage,
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onChanged: (val) {
+                                  if (val.startsWith('0') && val.length > 1) {
+                                    setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                                  } else if (errorMessage != null) {
+                                    setStateDialog(() => errorMessage = null);
+                                  }
+                                },
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext),
+                                  child: const Text('ANNULLA'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    if (pagesController.text.startsWith('0') && pagesController.text.length > 1) {
+                                      setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                                      return;
+                                    }
+                                    final pages = int.tryParse(pagesController.text);
+                                    if (pages != null && pages > 0) {
+                                      dialogContext.read<AppController>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl);
+                                      Navigator.pop(dialogContext);
+                                      ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto a "In lettura"')));
+                                      onBookAdded?.call();
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.primary, foregroundColor: Colors.white),
+                                  child: const Text('AGGIUNGI'),
+                                ),
+                              ],
                             ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(dialogContext),
-                              child: const Text('ANNULLA'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                final pages = int.tryParse(pagesController.text);
-                                if (pages != null && pages > 0) {
-                                  dialogContext.read<AppController>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl);
-                                  Navigator.pop(dialogContext);
-                                  ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto a "In lettura"')));
-                                  onBookAdded?.call();
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(dialogContext).colorScheme.primary, foregroundColor: Colors.white),
-                              child: const Text('AGGIUNGI'),
-                            ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   ),

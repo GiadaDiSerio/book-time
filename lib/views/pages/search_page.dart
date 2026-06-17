@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/book.dart';
 import '../../services/api_service.dart';
 import '../../controllers/app_controller.dart';
 import '../widgets/responsive_wrapper.dart';
@@ -293,6 +294,11 @@ class _SearchPageState extends State<SearchPage> {
                               ? 'https://covers.openlibrary.org/b/id/$coverId-M.jpg'
                               : null;
 
+                          // Controllo se il libro è già presente nelle liste dell'utente
+                          final isAlreadyAdded = appController.booksReading.any((b) => b.title.toLowerCase() == title.toLowerCase()) ||
+                                                 appController.booksToRead.any((b) => b.title.toLowerCase() == title.toLowerCase()) ||
+                                                 appController.booksRead.any((b) => b.title.toLowerCase() == title.toLowerCase());
+
                           return ListTile(
                             leading: imageUrl != null
                                 ? Image.network(
@@ -310,19 +316,54 @@ class _SearchPageState extends State<SearchPage> {
                               overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: Text(authors),
-                            trailing: const Icon(
-                              Icons.add_circle_outline,
-                            ), // Pulsante per aggiungere
-                            onTap: () {
-                              final bookKey = book['key'];
-                              showAddBookSheet(
-                                context,
-                                title: title,
-                                authors: authors,
-                                imageUrl: imageUrl,
-                                bookKey: bookKey,
-                              );
-                            },
+                            trailing: IconButton(
+                              icon: isAlreadyAdded
+                                  ? const Icon(Icons.check_circle, color: Colors.green)
+                                  : const Icon(Icons.add_circle_outline),
+                              onPressed: isAlreadyAdded
+                                  ? () {
+                                      // Rimuovi il libro
+                                      Book? bookToRemove;
+                                      for (final b in [...appController.booksReading, ...appController.booksToRead, ...appController.booksRead]) {
+                                        if (b.title.toLowerCase() == title.toLowerCase()) {
+                                          bookToRemove = b;
+                                          break;
+                                        }
+                                      }
+                                      if (bookToRemove != null) {
+                                        appController.removeBook(bookToRemove.id);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Libro rimosso dalla libreria.')),
+                                        );
+                                      }
+                                    }
+                                  : () {
+                                      final bookKey = book['key'];
+                                      showAddBookSheet(
+                                        context,
+                                        title: title,
+                                        authors: authors,
+                                        imageUrl: imageUrl,
+                                        bookKey: bookKey,
+                                      );
+                                    },
+                            ),
+                            onTap: isAlreadyAdded
+                                ? () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Questo libro è già nella tua libreria!')),
+                                    );
+                                  }
+                                : () {
+                                    final bookKey = book['key'];
+                                    showAddBookSheet(
+                                      context,
+                                      title: title,
+                                      authors: authors,
+                                      imageUrl: imageUrl,
+                                      bookKey: bookKey,
+                                    );
+                                  },
                           );
                         },
                       ),

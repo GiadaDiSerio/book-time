@@ -103,12 +103,36 @@ class ApiService {
     ];
 
     if (specificGenre == 'favorite') {
-      final randomSubject = subjects[Random().nextInt(subjects.length)];
-      query = 'subject=${Uri.encodeComponent(randomSubject)}';
-      if (existingBookTitles.isEmpty) {
-        suggestionReason = 'In evidenza: ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+      String selectedSubject = subjects[Random().nextInt(subjects.length)];
+      
+      if (existingBookTitles.isNotEmpty) {
+        // Scegliamo un libro a caso tra quelli salvati dall'utente
+        final randomBookTitle = existingBookTitles[Random().nextInt(existingBookTitles.length)];
+        try {
+          final subjectUrl = Uri.parse('$_baseUrl/search.json?title=${Uri.encodeComponent(randomBookTitle)}&limit=1');
+          final subResp = await http.get(subjectUrl);
+          if (subResp.statusCode == 200) {
+            final data = json.decode(subResp.body);
+            final docs = data['docs'] as List? ?? [];
+            if (docs.isNotEmpty && docs[0]['subject'] != null) {
+              final bookSubjects = docs[0]['subject'] as List;
+              // Cerchiamo un genere che coincida con quelli della nostra lista nota (per evitare categorie strane di OpenLibrary)
+              final validSubjects = bookSubjects
+                  .map((s) => s.toString().toLowerCase())
+                  .where((s) => subjects.contains(s))
+                  .toList();
+              if (validSubjects.isNotEmpty) {
+                selectedSubject = validSubjects.first;
+              }
+            }
+          }
+        } catch (_) {}
+
+        query = 'subject=${Uri.encodeComponent(selectedSubject)}';
+        suggestionReason = 'Siccome hai letto "$randomBookTitle", ti suggeriamo: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
       } else {
-        suggestionReason = 'Siccome ti piace il genere ${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
+        query = 'subject=${Uri.encodeComponent(selectedSubject)}';
+        suggestionReason = 'In evidenza: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
       }
     } else if (specificGenre != null) {
       query = 'subject=${Uri.encodeComponent(specificGenre)}';

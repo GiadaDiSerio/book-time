@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'views/pages/search_page.dart';
 import 'views/pages/timer_page.dart';
@@ -8,6 +9,12 @@ import 'views/dialogs/settings_dialog.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
   final appController = AppController();
   await appController.loadState();
   runApp(
@@ -29,6 +36,13 @@ class BookTimeApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 6,
+          contentTextStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+          actionTextColor: Colors.deepPurple[100],
+        ),
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -36,6 +50,14 @@ class BookTimeApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 6,
+          contentTextStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+          backgroundColor: Colors.grey[850],
+          actionTextColor: Colors.deepPurple[200],
+        ),
       ),
       themeMode: appController.themeMode,
       home: const HomePage(),

@@ -399,7 +399,7 @@ class ProfileTab extends StatelessWidget {
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        itemCount: books.length,
+        itemCount: books.length > 5 ? 5 : books.length,
         itemBuilder: (context, index) {
           final book = books[index];
           return _buildHorizontalBookCard(context, book, showProgress: showProgress);

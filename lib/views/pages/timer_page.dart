@@ -280,13 +280,15 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
                       context.read<AppController>().addReadingTime(totalSeconds);
                       Navigator.pop(dialogContext);
 
-                      // Mostra conferma
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      final messenger = ScaffoldMessenger.of(context);
+                      messenger.showSnackBar(
                         SnackBar(
                           content: Text(
                             'Aggiunto: ${hours > 0 ? '${hours}h ' : ''}${minutes}m alle tue statistiche!',
                           ),
                           backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
+                          duration: const Duration(seconds: 3),
                           action: SnackBarAction(
                             label: 'ANNULLA',
                             textColor: Colors.white,
@@ -296,6 +298,10 @@ class _TimerPageState extends State<TimerPage> with WidgetsBindingObserver {
                           ),
                         ),
                       );
+                      // Forza la chiusura dopo 3 secondi per evitare che rimanga bloccato al cambio pagina
+                      Future.delayed(const Duration(seconds: 3), () {
+                        messenger.hideCurrentSnackBar();
+                      });
                     }
                   },
                   style: ElevatedButton.styleFrom(

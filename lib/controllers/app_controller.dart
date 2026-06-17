@@ -197,6 +197,20 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  // Aggiorna le pagine totali di un libro
+  void updateTotalPages(String bookId, int newTotalPages) {
+    if (newTotalPages <= 0) return;
+    
+    for (var book in [..._booksReading, ..._booksToRead, ..._booksRead]) {
+      if (book.id == bookId) {
+        book.totalPages = newTotalPages;
+        saveState();
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
   // Aggiorna il progresso di lettura di un libro "In lettura"
   bool updateReadingProgress(String bookId, int newCurrentPage) {
     final index = _booksReading.indexWhere((b) => b.id == bookId);

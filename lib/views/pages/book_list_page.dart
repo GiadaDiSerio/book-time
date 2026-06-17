@@ -60,7 +60,7 @@ class _BookListPageState extends State<BookListPage> {
   }
 
   void _showUpdateProgressDialog(Book book) {
-    final controller = TextEditingController(text: '${book.currentPage}');
+    final controller = TextEditingController();
     final scrollController = ScrollController();
     String? errorMessage;
 
@@ -88,11 +88,13 @@ class _BookListPageState extends State<BookListPage> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        hintText: 'Es: ${book.totalPages}',
+                        hintText: 'Ora sei a ${book.currentPage}',
                       ),
                       autofocus: true,
-                      onChanged: (_) {
-                        if (errorMessage != null) {
+                      onChanged: (val) {
+                        if (val.startsWith('0') && val.length > 1) {
+                          setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                        } else if (errorMessage != null) {
                           setStateDialog(() => errorMessage = null);
                         }
                       },
@@ -107,6 +109,12 @@ class _BookListPageState extends State<BookListPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
+                    if (controller.text.startsWith('0') && controller.text.length > 1) {
+                      setStateDialog(() {
+                        errorMessage = 'Il numero non può iniziare con 0.';
+                      });
+                      return;
+                    }
                     final page = int.tryParse(controller.text);
                     if (page == null) return;
 
@@ -157,6 +165,77 @@ class _BookListPageState extends State<BookListPage> {
                         if (rating > 0) context.read<AppController>().rateBook(book.id, rating);
                       });
                     }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('AGGIORNA'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditTotalPagesDialog(Book book) {
+    final controller = TextEditingController(text: '${book.totalPages}');
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Modifica pagine totali'),
+              content: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Nuovo totale pagine',
+                  errorText: errorMessage,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                autofocus: true,
+                onChanged: (val) {
+                  if (val.startsWith('0') && val.length > 1) {
+                    setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                  } else if (errorMessage != null) {
+                    setStateDialog(() => errorMessage = null);
+                  }
+                },
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('ANNULLA'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (controller.text.startsWith('0') && controller.text.length > 1) {
+                      setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                      return;
+                    }
+                    final pages = int.tryParse(controller.text);
+                    if (pages == null || pages <= 0) {
+                      setStateDialog(() => errorMessage = 'Inserisci un numero valido maggiore di 0.');
+                      return;
+                    }
+                    if (pages < book.currentPage) {
+                      setStateDialog(() => errorMessage = 'Il totale non può essere inferiore alle pagine già lette (${book.currentPage}).');
+                      return;
+                    }
+
+                    context.read<AppController>().updateTotalPages(book.id, pages);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Pagine totali aggiornate')),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -548,6 +627,16 @@ class _BookListPageState extends State<BookListPage> {
                     _showMoveToReadingDialog(book);
                   },
                 ),
+                
+              if (widget.category == BookCategory.reading)
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.orange),
+                  title: const Text('Modifica pagine totali'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showEditTotalPagesDialog(book);
+                  },
+                ),
 
               if (widget.category != BookCategory.read)
                 ListTile(
@@ -591,45 +680,61 @@ class _BookListPageState extends State<BookListPage> {
     final pagesController = TextEditingController(
       text: book.totalPages > 0 ? '${book.totalPages}' : '',
     );
+    String? errorMessage;
+
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Quante pagine ha il libro?'),
-        content: TextField(
-          controller: pagesController,
-          keyboardType: TextInputType.number,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: 'Numero di pagine',
-            hintText: 'Es: 350',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('ANNULLA'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final pages = int.tryParse(pagesController.text);
-              if (pages != null && pages > 0) {
-                context.read<AppController>().moveBookToReading(book.id, pages);
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('"${book.title}" spostato in "In lettura"'),
-                  ),
-                );
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Quante pagine ha il libro?'),
+          content: TextField(
+            controller: pagesController,
+            keyboardType: TextInputType.number,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Numero di pagine',
+              hintText: 'Es: 350',
+              errorText: errorMessage,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onChanged: (val) {
+              if (val.startsWith('0') && val.length > 1) {
+                setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+              } else if (errorMessage != null) {
+                setStateDialog(() => errorMessage = null);
               }
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('SPOSTA'),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('ANNULLA'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (pagesController.text.startsWith('0') && pagesController.text.length > 1) {
+                  setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                  return;
+                }
+                final pages = int.tryParse(pagesController.text);
+                if (pages != null && pages > 0) {
+                  context.read<AppController>().moveBookToReading(book.id, pages);
+                  Navigator.pop(dialogContext);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('"${book.title}" spostato in "In lettura"'),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('SPOSTA'),
+            ),
+          ],
+        ),
       ),
     );
   }
