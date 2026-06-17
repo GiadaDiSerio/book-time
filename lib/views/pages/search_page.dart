@@ -24,6 +24,7 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _timeoutTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -53,10 +54,62 @@ class _SearchPageState extends State<SearchPage> {
   ];
   List<String> _currentScopriGenres = [];
 
+  final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
+  int _loadingWidgetsCount = 0;
+  bool _isSuggestionsLoading = true;
+  bool _hasTimedOut = false;
+  Timer? _timeoutTimer;
+  Completer<void>? _refreshCompleter;
+
+  void _onSuggestionsLoadingChanged(bool isLoading) {
+    if (!mounted) return;
+    setState(() {
+      if (isLoading) {
+        _loadingWidgetsCount++;
+      } else {
+        _loadingWidgetsCount--;
+        if (_loadingWidgetsCount <= 0) {
+          _loadingWidgetsCount = 0;
+          _isSuggestionsLoading = false;
+          _timeoutTimer?.cancel();
+          if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+            _refreshCompleter!.complete();
+            _refreshCompleter = null;
+          }
+        }
+      }
+    });
+  }
+
+  void _onSuggestionsResultChanged(bool hasResults) {
+    if (!mounted) return;
+    if (hasResults) {
+      setState(() {
+        _hasTimedOut = false; // Nasconde l'errore se i dati arrivano tardi
+      });
+    }
+  }
+
+  void _startTimeoutTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (!mounted) return;
+      setState(() {
+        _hasTimedOut = true;
+        _isSuggestionsLoading = false;
+      });
+      if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        _refreshCompleter!.complete();
+        _refreshCompleter = null;
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     _generateScopriGenres();
+    _startTimeoutTimer();
   }
 
   void _generateScopriGenres() {
@@ -174,9 +227,15 @@ class _SearchPageState extends State<SearchPage> {
                       final isSelected = index == _selectedCategoryIndex;
                       return GestureDetector(
                         onTap: () {
+                          if (_selectedCategoryIndex == index) return;
                           setState(() {
                             _selectedCategoryIndex = index;
+                            _loadingWidgetsCount = 0;
+                            _isSuggestionsLoading = true;
+                            _hasTimedOut = false;
+                            _timeoutTimer?.cancel();
                           });
+                          _startTimeoutTimer();
                         },
                         child: Container(
                           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
@@ -241,57 +300,130 @@ class _SearchPageState extends State<SearchPage> {
                       )
                     : _searchResults.isEmpty
                         ? RefreshIndicator(
+                            key: _refreshIndicatorKey,
                             onRefresh: () async {
+                              _refreshCompleter = Completer<void>();
                               setState(() {
+                                _loadingWidgetsCount = 0;
+                                _isSuggestionsLoading = true;
+                                _hasTimedOut = false;
                                 _refreshCounter++;
                                 _generateScopriGenres();
                               });
+                              _startTimeoutTimer();
+                              return _refreshCompleter!.future;
                             },
                             child: SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  IndexedStack(
-                                    index: _selectedCategoryIndex,
-                                    children: [
-                                      Column(
-                                        children: [
-                                          SuggestionsWidget(
-                                            key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
-                                            mode: SuggestionMode.author,
-                                            showLoadingIndicator: true,
+                                  if (_selectedCategoryIndex == 0) ...[
+                                    if (appController.booksRead.isEmpty && appController.booksReading.isEmpty && appController.booksToRead.isEmpty) ...[
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(20),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context).colorScheme.primaryContainer.withAlpha(128), // 0.5 opacity
+                                            borderRadius: BorderRadius.circular(16),
+                                            border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha(51)), // 0.2 opacity
                                           ),
-                                          SuggestionsWidget(
-                                            key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
-                                            mode: SuggestionMode.genre,
-                                            specificGenre: 'favorite',
-                                            showLoadingIndicator: true,
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Benvenuto su Book Time!',
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                'La tua libreria è ancora vuota. Cerca il tuo libro preferito o esplora i titoli qui sotto per iniziare a ricevere consigli su misura per te.',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                  height: 1.4,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
+                                        ),
                                       ),
-                                      Column(
-                                        children: [
-                                          for (int i = 0; i < _currentScopriGenres.length; i++)
-                                            SuggestionsWidget(
-                                              key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
-                                              mode: SuggestionMode.genre,
-                                              specificGenre: _currentScopriGenres[i],
-                                              showLoadingIndicator: true,
-                                            ),
-                                        ],
+                                      SuggestionsWidget(
+                                        key: ValueKey('pop_trending_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: 'trending',
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      ),
+                                      SuggestionsWidget(
+                                        key: ValueKey('pop_classic_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: 'classic',
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      ),
+                                      SuggestionsWidget(
+                                        key: ValueKey('pop_page_turner_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: 'page_turner',
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      ),
+                                    ] else ...[
+                                      SuggestionsWidget(
+                                        key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.author,
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      ),
+                                      SuggestionsWidget(
+                                        key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: 'favorite',
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
                                       ),
                                     ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Text(
-                                      '↓ Trascina verso il basso per aggiornare i suggerimenti',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ] else if (_selectedCategoryIndex == 1) ...[
+                                    for (int i = 0; i < _currentScopriGenres.length; i++)
+                                      SuggestionsWidget(
+                                        key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.genre,
+                                        specificGenre: _currentScopriGenres[i],
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      ),
+                                  ],
+                                  if (!_isSuggestionsLoading && _hasTimedOut) ...[
+                                    const SizedBox(height: 48),
+                                    Icon(
+                                      Icons.cloud_off_rounded,
+                                      color: Colors.grey[400],
+                                      size: 56,
                                     ),
-                                  ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'Non è stato possibile caricare i suggerimenti.\nControlla la connessione e trascina per riprovare.',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ] else if (!_isSuggestionsLoading) ...[
+                                    const SizedBox(height: 16),
+                                    const Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: Text(
+                                        '↓ Trascina verso il basso per aggiornare i suggerimenti',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      ),
+                                    ),
+                                  ],
                                 ],
                               ),
                             ),

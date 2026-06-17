@@ -151,9 +151,10 @@ class AppController extends ChangeNotifier {
 
   // Controlla se un libro è già presente in una qualsiasi lista (per titolo, usato solo all'aggiunta)
   bool _isBookInAnyList(String title) {
-    return _booksToRead.any((b) => b.title == title) ||
-           _booksReading.any((b) => b.title == title) ||
-           _booksRead.any((b) => b.title == title);
+    final lowerTitle = title.toLowerCase();
+    return _booksToRead.any((b) => b.title.toLowerCase() == lowerTitle) ||
+           _booksReading.any((b) => b.title.toLowerCase() == lowerTitle) ||
+           _booksRead.any((b) => b.title.toLowerCase() == lowerTitle);
   }
 
   void addBookToRead(String title, {String? id, String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl}) {

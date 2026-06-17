@@ -10,12 +10,16 @@ class SuggestionsWidget extends StatefulWidget {
   final SuggestionMode mode;
   final String? specificGenre;
   final bool showLoadingIndicator;
+  final ValueChanged<bool>? onLoadingStateChanged;
+  final ValueChanged<bool>? onHasResults;
 
   const SuggestionsWidget({
     super.key,
     this.mode = SuggestionMode.author,
     this.specificGenre,
-    this.showLoadingIndicator = true,
+    this.showLoadingIndicator = false,
+    this.onLoadingStateChanged,
+    this.onHasResults,
   });
 
   @override
@@ -30,6 +34,9 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onLoadingStateChanged?.call(true);
+    });
     _fetchSuggestions();
   }
 
@@ -79,21 +86,88 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
           _suggestions = result[1];
           _isLoading = false;
         });
+        widget.onLoadingStateChanged?.call(false);
+        widget.onHasResults?.call(_suggestions.isNotEmpty);
       }
     } catch (e) {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        widget.onLoadingStateChanged?.call(false);
+        widget.onHasResults?.call(false);
+      }
     }
+  }
+  Widget _buildSkeleton(BuildContext context) {
+    final skeletonColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Container(
+            height: 20,
+            width: 160,
+            decoration: BoxDecoration(
+              color: skeletonColor,
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 280,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            itemCount: 4,
+            itemBuilder: (context, index) {
+              return Container(
+                width: 130,
+                margin: const EdgeInsets.symmetric(horizontal: 6.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 190,
+                      width: 130,
+                      decoration: BoxDecoration(
+                        color: skeletonColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      height: 14,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: skeletonColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      height: 14,
+                      width: 70,
+                      decoration: BoxDecoration(
+                        color: skeletonColor,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const Divider(),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return widget.showLoadingIndicator
-          ? const Padding(
-              padding: EdgeInsets.all(24.0),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          : const SizedBox.shrink();
+      return _buildSkeleton(context);
     }
 
     if (_suggestions.isEmpty) {
