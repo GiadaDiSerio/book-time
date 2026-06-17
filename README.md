@@ -1,8 +1,8 @@
-# 📚 Book Time
+# Book Time
 
 **Book Time** is a Flutter application designed for book lovers. It allows you to discover new books, manage your personal library, and track your reading sessions using a built-in timer.
 
-## ✨ Features
+## Features
 
 - **Book Search:** Easily find any book and fetch details thanks to the **Open Library API** integration.
 - **Personal Library:** Add books and organize them (e.g., To Read, Reading, Read).
@@ -11,7 +11,7 @@
 - **Suggestions:** Discover new titles recommended based on your preferences.
 - **Partial Offline Support:** Uses `shared_preferences` to save essential data locally.
 
-## 🏗️ Project Architecture (Three-Tier & MVC)
+## Project Architecture (Three-Tier & MVC)
 
 The application is structured following a strict **Three-Tier** system architecture, with the presentation and application logic organized using the **Model-View-Controller (MVC)** design pattern. This ensures high cohesion and low coupling.
 
@@ -19,7 +19,7 @@ The application is structured following a strict **Three-Tier** system architect
 - **Application Logic Layer (Controllers & Models)**: Defines the central data structures (`Book`) and orchestrates the app state using `provider`.
 - **Storage Layer (Services)**: Handles persistent data via `shared_preferences` and external HTTP requests to the Open Library API.
 
-### 📂 Directory Structure
+### Directory Structure
 
 ```text
 lib/
@@ -50,7 +50,7 @@ lib/
 - **Networking:** `http` for Open Library API requests
 - **Other:** `image_picker`, `uuid`, `path_provider`
 
-## 🚀 Getting Started
+## Getting Started
 
 If you want to run this app locally, follow these steps:
 

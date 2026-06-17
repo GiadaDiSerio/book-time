@@ -100,7 +100,43 @@ class ApiService {
       'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
       'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
       'arte', 'scienza', 'psicologia', 'classici', 'romanzi rosa',
+      'saggistica', 'umorismo', 'filosofia', 'fumetti', 'cucina',
+      'viaggi', 'religione', 'musica', 'natura', 'crescita personale',
+      'young adult', 'distopia', 'architettura', 'true crime', 'fotografia',
     ];
+
+    final Map<String, String> genreTranslations = {
+      'romanzo': 'novel',
+      'thriller': 'thriller',
+      'fantasy': 'fantasy',
+      'avventura': 'adventure',
+      'giallo': 'mystery',
+      'fantascienza': 'science fiction',
+      'horror': 'horror',
+      'poesia': 'poetry',
+      'storia': 'history',
+      'biografia': 'biography',
+      'arte': 'art',
+      'scienza': 'science',
+      'psicologia': 'psychology',
+      'classici': 'classics',
+      'romanzi rosa': 'romance',
+      'saggistica': 'essays',
+      'umorismo': 'humor',
+      'filosofia': 'philosophy',
+      'fumetti': 'comics',
+      'cucina': 'cooking',
+      'viaggi': 'travel',
+      'religione': 'religion',
+      'musica': 'music',
+      'natura': 'nature',
+      'crescita personale': 'self-help',
+      'young adult': 'young adult',
+      'distopia': 'dystopian',
+      'architettura': 'architecture',
+      'true crime': 'true crime',
+      'fotografia': 'photography',
+    };
 
     if (specificGenre == 'favorite') {
       String selectedSubject = subjects[Random().nextInt(subjects.length)];
@@ -116,26 +152,35 @@ class ApiService {
             final docs = data['docs'] as List? ?? [];
             if (docs.isNotEmpty && docs[0]['subject'] != null) {
               final bookSubjects = docs[0]['subject'] as List;
-              // Cerchiamo un genere che coincida con quelli della nostra lista nota (per evitare categorie strane di OpenLibrary)
+              final englishValues = genreTranslations.values.toList();
+              // Cerchiamo un genere che coincida con quelli tradotti in inglese o con i termini in italiano
               final validSubjects = bookSubjects
                   .map((s) => s.toString().toLowerCase())
-                  .where((s) => subjects.contains(s))
+                  .where((s) => englishValues.contains(s) || subjects.contains(s))
                   .toList();
               if (validSubjects.isNotEmpty) {
-                selectedSubject = validSubjects.first;
+                final foundSubject = validSubjects.first;
+                if (englishValues.contains(foundSubject)) {
+                  selectedSubject = genreTranslations.entries.firstWhere((e) => e.value == foundSubject).key;
+                } else {
+                  selectedSubject = foundSubject;
+                }
               }
             }
           }
         } catch (_) {}
 
-        query = 'subject=${Uri.encodeComponent(selectedSubject)}';
-        suggestionReason = 'Siccome hai letto "$randomBookTitle", ti suggeriamo: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
+        final englishSubjectForQuery = genreTranslations[selectedSubject] ?? selectedSubject;
+        query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
+        suggestionReason = 'Perché hai letto "$randomBookTitle": ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
       } else {
-        query = 'subject=${Uri.encodeComponent(selectedSubject)}';
+        final englishSubjectForQuery = genreTranslations[selectedSubject] ?? selectedSubject;
+        query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
         suggestionReason = 'In evidenza: ${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
       }
     } else if (specificGenre != null) {
-      query = 'subject=${Uri.encodeComponent(specificGenre)}';
+      final englishSubjectForQuery = genreTranslations[specificGenre.toLowerCase()] ?? specificGenre;
+      query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
       suggestionReason = '${specificGenre[0].toUpperCase()}${specificGenre.substring(1)}';
     } else if (isAuthorMode && validAuthors.isNotEmpty) {
       final randomAuthor = validAuthors[Random().nextInt(validAuthors.length)];
@@ -144,11 +189,12 @@ class ApiService {
       suggestionReason = 'Perché ti piace $cleanAuthor';
     } else {
       final randomSubject = subjects[Random().nextInt(subjects.length)];
-      query = 'subject=${Uri.encodeComponent(randomSubject)}';
+      final englishSubjectForQuery = genreTranslations[randomSubject] ?? randomSubject;
+      query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
       suggestionReason = '${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
     }
 
-    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=15');
+    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=40');
     
     try {
       final response = await http.get(url);

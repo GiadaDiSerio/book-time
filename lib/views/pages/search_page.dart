@@ -47,6 +47,9 @@ class _SearchPageState extends State<SearchPage> {
     'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
     'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
     'arte', 'scienza', 'psicologia', 'classici', 'romanzi rosa',
+    'saggistica', 'umorismo', 'filosofia', 'fumetti', 'cucina',
+    'viaggi', 'religione', 'musica', 'natura', 'crescita personale',
+    'young adult', 'distopia', 'architettura', 'true crime', 'fotografia',
   ];
   List<String> _currentScopriGenres = [];
 
@@ -155,45 +158,53 @@ class _SearchPageState extends State<SearchPage> {
           ),
 
           // Sezione Categorie (Pills)
-          SizedBox(
-            height: 48,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: List.generate(_categories.length, (index) {
-                final isSelected = index == _selectedCategoryIndex;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedCategoryIndex = index;
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: isSelected 
-                          ? Theme.of(context).colorScheme.primary 
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Text(
-                      _categories[index],
-                      style: TextStyle(
-                        color: isSelected 
-                            ? Theme.of(context).colorScheme.onPrimary 
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _searchController,
+            builder: (context, value, child) {
+              if (value.text.isNotEmpty) {
+                return const SizedBox.shrink();
+              }
+              return SizedBox(
+                height: 48,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: List.generate(_categories.length, (index) {
+                      final isSelected = index == _selectedCategoryIndex;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategoryIndex = index;
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? Theme.of(context).colorScheme.primary 
+                                : Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: Text(
+                            _categories[index],
+                            style: TextStyle(
+                              color: isSelected 
+                                  ? Theme.of(context).colorScheme.onPrimary 
+                                  : Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ),
-                );
-              }),
-            ),
-          ),
+                ),
+              );
+            },
           ),
 
           // La lista dei risultati (o errore o caricamento o suggerimenti)
@@ -241,26 +252,37 @@ class _SearchPageState extends State<SearchPage> {
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  if (_selectedCategoryIndex == 0) ...[
-                                    SuggestionsWidget(
-                                      key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.author,
-                                    ),
-                                    SuggestionsWidget(
-                                      key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
-                                      mode: SuggestionMode.genre,
-                                      specificGenre: 'favorite',
-                                      showLoadingIndicator: false,
-                                    ),
-                                  ] else if (_selectedCategoryIndex == 1) ...[
-                                    for (int i = 0; i < _currentScopriGenres.length; i++)
-                                      SuggestionsWidget(
-                                        key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
-                                        mode: SuggestionMode.genre,
-                                        specificGenre: _currentScopriGenres[i],
-                                        showLoadingIndicator: i == 0,
+                                  IndexedStack(
+                                    index: _selectedCategoryIndex,
+                                    children: [
+                                      Column(
+                                        children: [
+                                          SuggestionsWidget(
+                                            key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
+                                            mode: SuggestionMode.author,
+                                            showLoadingIndicator: true,
+                                          ),
+                                          SuggestionsWidget(
+                                            key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
+                                            mode: SuggestionMode.genre,
+                                            specificGenre: 'favorite',
+                                            showLoadingIndicator: true,
+                                          ),
+                                        ],
                                       ),
-                                  ],
+                                      Column(
+                                        children: [
+                                          for (int i = 0; i < _currentScopriGenres.length; i++)
+                                            SuggestionsWidget(
+                                              key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
+                                              mode: SuggestionMode.genre,
+                                              specificGenre: _currentScopriGenres[i],
+                                              showLoadingIndicator: true,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                   const SizedBox(height: 16),
                                   const Padding(
                                     padding: EdgeInsets.all(16.0),
