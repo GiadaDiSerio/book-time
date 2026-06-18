@@ -9,7 +9,7 @@
 - **Reading Timer:** Time your reading sessions and keep track of how much time you dedicate to your books.
 - **User Profile & Stats:** Monitor your reading progress over time.
 - **Suggestions:** Discover new titles recommended based on your preferences.
-- **Partial Offline Support:** Uses `shared_preferences` to save essential data locally.
+- **Smart Offline Support & Caching:** Uses `shared_preferences` for instantaneous Stale-while-revalidate data loading, and `cached_network_image` for persistent cover image caching, resulting in lightning-fast, zero-wait loading times.
 
 ## Project Architecture (Three-Tier & MVC)
 
@@ -48,6 +48,7 @@ lib/
 - **State Management:** `provider`
 - **Local Storage:** `shared_preferences`
 - **Networking:** `http` for Open Library API requests
+- **Image Caching:** `cached_network_image` for offline covers and RAM optimization
 - **Other:** `image_picker`, `uuid`, `path_provider`
 
 ## Getting Started
