@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/api_service.dart';
 import '../../controllers/app_controller.dart';
 import '../dialogs/add_book_sheet.dart';
@@ -72,12 +73,29 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
         ...appController.booksToRead.map((b) => b.title.toLowerCase()),
       ];
 
+      final isAuthorMode = widget.mode == SuggestionMode.author;
+      final specificGenre = widget.specificGenre;
+      final languageCode = appController.languageCode;
+      
+      final cacheKey = '${isAuthorMode}_${specificGenre}_$languageCode';
+      final cachedResult = await apiService.getCachedSuggestions(cacheKey);
+
+      if (mounted && cachedResult != null) {
+        setState(() {
+          _suggestionReason = cachedResult[0];
+          _suggestions = cachedResult[1];
+          _isLoading = false;
+        });
+        widget.onLoadingStateChanged?.call(false);
+        widget.onHasResults?.call(_suggestions.isNotEmpty);
+      }
+
       final result = await apiService.fetchSuggestions(
         validAuthors: validAuthors,
-        isAuthorMode: widget.mode == SuggestionMode.author,
-        languageCode: appController.languageCode,
+        isAuthorMode: isAuthorMode,
+        languageCode: languageCode,
         existingBookTitles: allMyBookTitles,
-        specificGenre: widget.specificGenre,
+        specificGenre: specificGenre,
       );
 
       if (mounted) {
@@ -225,12 +243,18 @@ class _SuggestionsWidgetState extends State<SuggestionsWidget> {
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              imageUrl,
+                            child: CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              memCacheWidth: 150,
                               height: 190,
                               width: 130,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => Container(
+                              placeholder: (context, url) => Container(
+                                height: 190,
+                                width: 130,
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              ),
+                              errorWidget: (context, url, error) => Container(
                                 height: 190,
                                 width: 130,
                                 color: Theme.of(context).colorScheme.surfaceContainerHighest,

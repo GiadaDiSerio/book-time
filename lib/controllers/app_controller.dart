@@ -157,26 +157,26 @@ class AppController extends ChangeNotifier {
            _booksRead.any((b) => b.title.toLowerCase() == lowerTitle);
   }
 
-  void addBookToRead(String title, {String? id, String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl}) {
+  void addBookToRead(String title, {String? id, String author = 'Autore sconosciuto', int totalPages = 0, String? coverUrl, String? plot}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksToRead.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
+    _booksToRead.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl, plot: plot));
     saveState();
     notifyListeners();
   }
 
-  void addBookReading(String title, {String? id, String author = 'Autore sconosciuto', required int totalPages, String? coverUrl}) {
+  void addBookReading(String title, {String? id, String author = 'Autore sconosciuto', required int totalPages, String? coverUrl, String? plot}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksReading.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl));
+    _booksReading.add(Book(id: id, title: title, author: author, totalPages: totalPages, coverUrl: coverUrl, plot: plot));
     saveState();
     notifyListeners();
   }
 
-  void addBookRead(String title, {String? id, String author = 'Autore sconosciuto', String? coverUrl, int rating = 0}) {
+  void addBookRead(String title, {String? id, String author = 'Autore sconosciuto', String? coverUrl, int rating = 0, String? plot}) {
     // Controlliamo che non sia già presente in nessuna lista
     if (_isBookInAnyList(title)) return;
-    _booksRead.add(Book(id: id, title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating));
+    _booksRead.add(Book(id: id, title: title, author: author, totalPages: 0, currentPage: 0, coverUrl: coverUrl, rating: rating, plot: plot));
     saveState();
     notifyListeners();
   }
@@ -205,6 +205,18 @@ class AppController extends ChangeNotifier {
     for (var book in [..._booksReading, ..._booksToRead, ..._booksRead]) {
       if (book.id == bookId) {
         book.totalPages = newTotalPages;
+        saveState();
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  // Aggiorna la trama di un libro già presente
+  void updateBookPlot(String bookId, String plot) {
+    for (var book in [..._booksReading, ..._booksToRead, ..._booksRead]) {
+      if (book.id == bookId) {
+        book.plot = plot;
         saveState();
         notifyListeners();
         return;
@@ -284,6 +296,7 @@ class AppController extends ChangeNotifier {
         author: book.author,
         totalPages: book.totalPages,
         coverUrl: book.coverUrl,
+        plot: book.plot,
       ));
       saveState();
       notifyListeners();
@@ -300,6 +313,7 @@ class AppController extends ChangeNotifier {
         author: book.author,
         totalPages: totalPages,
         coverUrl: book.coverUrl,
+        plot: book.plot,
       ));
       saveState();
       notifyListeners();
@@ -318,6 +332,7 @@ class AppController extends ChangeNotifier {
         currentPage: book.totalPages,
         coverUrl: book.coverUrl,
         rating: rating,
+        plot: book.plot,
       ));
       saveState();
       notifyListeners();

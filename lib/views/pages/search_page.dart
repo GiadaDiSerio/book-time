@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/book.dart';
 import '../../services/api_service.dart';
 import '../../controllers/app_controller.dart';
@@ -45,9 +46,6 @@ class _SearchPageState extends State<SearchPage> {
   // Contatore per forzare il refresh dei suggerimenti
   int _refreshCounter = 0;
 
-  int _selectedCategoryIndex = 0;
-  final List<String> _categories = ['PER TE', 'SCOPRI'];
-
   final List<String> _allSubjects = [
     'romanzo', 'thriller', 'fantasy', 'avventura', 'giallo',
     'fantascienza', 'horror', 'poesia', 'storia', 'biografia',
@@ -56,8 +54,7 @@ class _SearchPageState extends State<SearchPage> {
     'viaggi', 'religione', 'musica', 'natura', 'crescita personale',
     'young adult', 'distopia', 'architettura', 'true crime', 'fotografia',
   ];
-  List<String> _currentScopriGenres = [];
-  List<String> _currentPerTeExtraSections = [];
+  List<String> _currentSections = [];
 
   final GlobalKey<RefreshIndicatorState> _refreshIndicatorKey = GlobalKey<RefreshIndicatorState>();
   int _loadingWidgetsCount = 0;
@@ -113,16 +110,11 @@ class _SearchPageState extends State<SearchPage> {
   @override
   void initState() {
     super.initState();
-    _generateScopriGenres();
+    _generateSections();
     _startTimeoutTimer();
   }
 
-  void _generateScopriGenres() {
-    final copy = List<String>.from(_allSubjects)
-      ..removeWhere((genre) => _currentScopriGenres.contains(genre))
-      ..shuffle();
-    _currentScopriGenres = copy.take(5).toList();
-
+  void _generateSections() {
     bool hasBooks = false;
     try {
       final appController = context.read<AppController>();
@@ -131,11 +123,13 @@ class _SearchPageState extends State<SearchPage> {
                  appController.booksReading.isNotEmpty;
     } catch (_) {}
 
-    final pool = ['new_releases', 'short_reads', 'mood']..shuffle();
+    final copy = List<String>.from(_allSubjects)..shuffle();
+    
     if (hasBooks) {
-      _currentPerTeExtraSections = ['author', 'favorite', pool.first]..shuffle();
+      final genres = copy.take(3).toList();
+      _currentSections = ['author', ...genres];
     } else {
-      _currentPerTeExtraSections = pool.take(3).toList();
+      _currentSections = copy.take(4).toList();
     }
   }
 
@@ -232,64 +226,7 @@ class _SearchPageState extends State<SearchPage> {
             ),
           ),
 
-          // Sezione Categorie (Pills)
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _searchController,
-            builder: (context, value, child) {
-              if (value.text.isNotEmpty) {
-                return const SizedBox.shrink();
-              }
-              return SizedBox(
-                height: 48,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: List.generate(_categories.length, (index) {
-                      final isSelected = index == _selectedCategoryIndex;
-                      return GestureDetector(
-                        onTap: () {
-                          if (_selectedCategoryIndex == index) return;
-                          if (_scrollController.hasClients) {
-                            _scrollController.jumpTo(0);
-                          }
-                          setState(() {
-                            _selectedCategoryIndex = index;
-                            _loadingWidgetsCount = 0;
-                            _isSuggestionsLoading = true;
-                            _hasTimedOut = false;
-                            _timeoutTimer?.cancel();
-                          });
-                          _startTimeoutTimer();
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? Theme.of(context).colorScheme.primary 
-                                : Theme.of(context).colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(24),
-                          ),
-                          child: Text(
-                            _categories[index],
-                            style: TextStyle(
-                              color: isSelected 
-                                  ? Theme.of(context).colorScheme.onPrimary 
-                                  : Theme.of(context).colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              );
-            },
-          ),
+          // Spazio rimosso per le categorie (Pills)
 
           // La lista dei risultati (o errore o caricamento o suggerimenti)
           Expanded(
@@ -327,13 +264,14 @@ class _SearchPageState extends State<SearchPage> {
                         ? RefreshIndicator(
                             key: _refreshIndicatorKey,
                             onRefresh: () async {
+                              apiService.clearSuggestionsCache();
                               _refreshCompleter = Completer<void>();
                               setState(() {
                                 _loadingWidgetsCount = 0;
                                 _isSuggestionsLoading = true;
                                 _hasTimedOut = false;
                                 _refreshCounter++;
-                                _generateScopriGenres();
+                                _generateSections();
                               });
                               _startTimeoutTimer();
                               return _refreshCompleter!.future;
@@ -344,85 +282,57 @@ class _SearchPageState extends State<SearchPage> {
                               child: Column(
                                 children: [
                                   const SizedBox(height: 8),
-                                  if (_selectedCategoryIndex == 0) ...[
-                                    if (appController.booksRead.isEmpty && appController.booksReading.isEmpty && appController.booksToRead.isEmpty) ...[
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(20),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.primaryContainer.withAlpha(128), // 0.5 opacity
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha(51)), // 0.2 opacity
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Benvenuto su Book Time!',
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                                ),
+                                  if (appController.booksRead.isEmpty && appController.booksReading.isEmpty && appController.booksToRead.isEmpty) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(20),
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.primaryContainer.withAlpha(128), // 0.5 opacity
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(color: Theme.of(context).colorScheme.primary.withAlpha(51)), // 0.2 opacity
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Benvenuto su Book Time!',
+                                              style: TextStyle(
+                                                fontSize: 20,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context).colorScheme.onPrimaryContainer,
                                               ),
-                                              const SizedBox(height: 8),
-                                              Text(
-                                                'La tua libreria è ancora vuota. Cerca il tuo libro preferito o esplora i titoli qui sotto per iniziare a ricevere consigli su misura per te.',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                  height: 1.4,
-                                                ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'La tua libreria è ancora vuota. Cerca il tuo libro preferito o esplora i titoli qui sotto per iniziare a ricevere consigli su misura per te.',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                                height: 1.4,
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      for (int i = 0; i < _currentPerTeExtraSections.length; i++)
-                                        SuggestionsWidget(
-                                          key: ValueKey('pop_${_currentPerTeExtraSections[i]}_${appController.languageCode}_$_refreshCounter'),
-                                          mode: SuggestionMode.genre,
-                                          specificGenre: _currentPerTeExtraSections[i],
-                                          onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                          onHasResults: _onSuggestionsResultChanged,
-                                        ),
-                                    ] else ...[
-                                      for (int i = 0; i < _currentPerTeExtraSections.length; i++)
-                                        if (_currentPerTeExtraSections[i] == 'author')
-                                          SuggestionsWidget(
-                                            key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
-                                            mode: SuggestionMode.author,
-                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                            onHasResults: _onSuggestionsResultChanged,
-                                          )
-                                        else if (_currentPerTeExtraSections[i] == 'favorite')
-                                          SuggestionsWidget(
-                                            key: ValueKey('fav_genre_${appController.languageCode}_$_refreshCounter'),
-                                            mode: SuggestionMode.genre,
-                                            specificGenre: 'favorite',
-                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                            onHasResults: _onSuggestionsResultChanged,
-                                          )
-                                        else
-                                          SuggestionsWidget(
-                                            key: ValueKey('${_currentPerTeExtraSections[i]}_${appController.languageCode}_$_refreshCounter'),
-                                            mode: SuggestionMode.genre,
-                                            specificGenre: _currentPerTeExtraSections[i],
-                                            onLoadingStateChanged: _onSuggestionsLoadingChanged,
-                                            onHasResults: _onSuggestionsResultChanged,
-                                          ),
-                                    ],
-                                  ] else if (_selectedCategoryIndex == 1) ...[
-                                    for (int i = 0; i < _currentScopriGenres.length; i++)
+                                    ),
+                                  ],
+                                  for (int i = 0; i < _currentSections.length; i++)
+                                    if (_currentSections[i] == 'author')
                                       SuggestionsWidget(
-                                        key: ValueKey('scopri_${_currentScopriGenres[i]}_${appController.languageCode}_$_refreshCounter'),
+                                        key: ValueKey('author_${appController.languageCode}_$_refreshCounter'),
+                                        mode: SuggestionMode.author,
+                                        onLoadingStateChanged: _onSuggestionsLoadingChanged,
+                                        onHasResults: _onSuggestionsResultChanged,
+                                      )
+                                    else
+                                      SuggestionsWidget(
+                                        key: ValueKey('${_currentSections[i]}_${appController.languageCode}_$_refreshCounter'),
                                         mode: SuggestionMode.genre,
-                                        specificGenre: _currentScopriGenres[i],
+                                        specificGenre: _currentSections[i],
                                         onLoadingStateChanged: _onSuggestionsLoadingChanged,
                                         onHasResults: _onSuggestionsResultChanged,
                                       ),
-                                  ],
                                   if (!_isSuggestionsLoading && _hasTimedOut) ...[
                                     const SizedBox(height: 48),
                                     Icon(
@@ -479,12 +389,13 @@ class _SearchPageState extends State<SearchPage> {
 
                           return ListTile(
                             leading: imageUrl != null
-                                ? Image.network(
-                                    imageUrl,
+                                ? CachedNetworkImage(
+                                    imageUrl: imageUrl,
+                                    memCacheWidth: 150,
                                     width: 50,
                                     fit: BoxFit.cover,
                                     // Se l'immagine non si carica, mostra un'icona
-                                    errorBuilder: (context, error, stackTrace) =>
+                                    errorWidget: (context, url, error) =>
                                         const Icon(Icons.book, size: 50),
                                   )
                                 : const Icon(Icons.book, size: 50),

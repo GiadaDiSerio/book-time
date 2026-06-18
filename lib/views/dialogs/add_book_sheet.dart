@@ -49,14 +49,28 @@ void showAddBookSheet(
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Aggiungi "$title"',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(ctx).colorScheme.primary,
-                      ),
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      children: [
+                        Text(
+                          'Aggiungi "$title"',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(ctx).colorScheme.primary,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          authors,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                            fontStyle: FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
                   // Trama box
@@ -86,7 +100,8 @@ void showAddBookSheet(
                     title: const Text('Aggiungi a "Da leggere"'),
                     onTap: () {
                       final messenger = ScaffoldMessenger.of(ctx);
-                      ctx.read<AppController>().addBookToRead(title, author: authors, coverUrl: imageUrl);
+                      final finalPlot = plot == 'Caricamento trama...' ? null : plot;
+                      ctx.read<AppController>().addBookToRead(title, author: authors, coverUrl: imageUrl, plot: finalPlot);
                       Navigator.pop(ctx);
                       messenger.showSnackBar(const SnackBar(content: Text('Aggiunto a "Da leggere"')));
                       onBookAdded?.call();
@@ -137,7 +152,8 @@ void showAddBookSheet(
                                     }
                                     final pages = int.tryParse(pagesController.text);
                                     if (pages != null && pages > 0) {
-                                      dialogContext.read<AppController>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl);
+                                      final finalPlot = plot == 'Caricamento trama...' ? null : plot;
+                                      dialogContext.read<AppController>().addBookReading(title, author: authors, totalPages: pages, coverUrl: imageUrl, plot: finalPlot);
                                       Navigator.pop(dialogContext);
                                       ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto a "In lettura"')));
                                       onBookAdded?.call();
@@ -158,9 +174,10 @@ void showAddBookSheet(
                     leading: const Icon(Icons.check_circle_outline, color: Colors.green),
                     title: const Text('Aggiungi come "Letto"'),
                     onTap: () {
+                      final finalPlot = plot == 'Caricamento trama...' ? null : plot;
                       Navigator.pop(ctx); // Chiudi il bottom sheet
                       showRatingDialog(parentContext, title, (rating) {
-                        parentContext.read<AppController>().addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating);
+                        parentContext.read<AppController>().addBookRead(title, author: authors, coverUrl: imageUrl, rating: rating, plot: finalPlot);
                         ScaffoldMessenger.of(parentContext).showSnackBar(const SnackBar(content: Text('Aggiunto ai "Letti"!')));
                         onBookAdded?.call();
                       });

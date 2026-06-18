@@ -1,11 +1,29 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math';
+import 'storage_service.dart';
 
 /// Servizio dedicato alle chiamate verso l'API di Open Library.
 /// Separa la logica di rete dall'interfaccia utente (SoC).
 class ApiService {
   static const String _baseUrl = 'https://openlibrary.org';
+
+  void clearSuggestionsCache() {
+    // Svuota solo se volessimo una pulizia forzata
+  }
+
+  Future<List<dynamic>?> getCachedSuggestions(String cacheKey) async {
+    final cacheString = await storageService.getString('cache_$cacheKey');
+    if (cacheString != null) {
+      try {
+        final decoded = json.decode(cacheString) as List<dynamic>;
+        return decoded;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  }
 
   /// Cerca libri per titolo o autore
   Future<List<dynamic>> searchBooks(String query, String languageCode) async {
@@ -93,6 +111,8 @@ class ApiService {
     required List<String> existingBookTitles,
     String? specificGenre,
   }) async {
+    final cacheKey = '${isAuthorMode}_${specificGenre}_$languageCode';
+    // Rimuoviamo il ritorno anticipato, verrà gestito dal widget!
     String query = '';
     String suggestionReason = '';
 
@@ -185,8 +205,7 @@ class ApiService {
         query = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
         
         if (foundMatch) {
-          // Capitalizziamo la prima lettera
-          String displaySubject = '${selectedSubject[0].toUpperCase()}${selectedSubject.substring(1)}';
+          // Non c'è bisogno di displaySubject
           suggestionReason = 'Perché hai letto "$matchedBookTitle"';
         } else {
           // Se anche dopo 5 libri non troviamo nulla di mappato, proponiamo un genere a caso
@@ -248,7 +267,7 @@ class ApiService {
       suggestionReason = '${randomSubject[0].toUpperCase()}${randomSubject.substring(1)}';
     }
 
-    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=40&fields=key,title,author_name,cover_i');
+    final url = Uri.parse('$_baseUrl/search.json?$query&language=$languageCode&limit=5&fields=key,title,author_name,cover_i');
     
     try {
       final response = await http.get(url);
@@ -258,8 +277,7 @@ class ApiService {
         
         var filteredDocs = docs.where((book) {
           final title = (book['title'] ?? '').toString().toLowerCase();
-          final hasCover = book['cover_i'] != null;
-          return hasCover && !existingBookTitles.contains(title);
+          return !existingBookTitles.contains(title);
         }).toList();
         filteredDocs.shuffle();
         filteredDocs = filteredDocs.take(5).toList();
@@ -269,7 +287,7 @@ class ApiService {
           final randomSubject = subjects[Random().nextInt(subjects.length)];
           final englishSubjectForQuery = genreTranslations[randomSubject] ?? randomSubject;
           final fallbackQuery = 'subject=${Uri.encodeComponent(englishSubjectForQuery)}';
-          final fallbackUrl = Uri.parse('$_baseUrl/search.json?$fallbackQuery&language=$languageCode&limit=40&fields=key,title,author_name,cover_i');
+          final fallbackUrl = Uri.parse('$_baseUrl/search.json?$fallbackQuery&language=$languageCode&limit=5&fields=key,title,author_name,cover_i');
           final fallbackResponse = await http.get(fallbackUrl);
           
           if (fallbackResponse.statusCode == 200) {
@@ -277,8 +295,7 @@ class ApiService {
             final fallbackDocs = fallbackData['docs'] as List? ?? [];
             filteredDocs = fallbackDocs.where((book) {
               final title = (book['title'] ?? '').toString().toLowerCase();
-              final hasCover = book['cover_i'] != null;
-              return hasCover && !existingBookTitles.contains(title);
+              return !existingBookTitles.contains(title);
             }).toList();
             filteredDocs.shuffle();
             filteredDocs = filteredDocs.take(5).toList();
@@ -286,7 +303,11 @@ class ApiService {
           }
         }
 
-        return [suggestionReason, filteredDocs];
+        final result = [suggestionReason, filteredDocs];
+        if (filteredDocs.isNotEmpty) {
+          await storageService.saveString('cache_$cacheKey', json.encode(result));
+        }
+        return result;
       }
       return [suggestionReason, []];
     } catch (e) {

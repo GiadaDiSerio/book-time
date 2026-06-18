@@ -61,7 +61,6 @@ class _BookListPageState extends State<BookListPage> {
 
   void _showUpdateProgressDialog(Book book) {
     final controller = TextEditingController();
-    final scrollController = ScrollController();
     String? errorMessage;
 
     showDialog(
@@ -70,37 +69,35 @@ class _BookListPageState extends State<BookListPage> {
         return StatefulBuilder(
           builder: (dialogCtx, setStateDialog) {
             return AlertDialog(
+              scrollable: true,
               title: Text('Aggiorna "${book.title}"'),
-              content: SingleChildScrollView(
-                controller: scrollController,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Pagine totali: ${book.totalPages}'),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: controller,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'A che pagina sei arrivato?',
-                        errorText: errorMessage,
-                        errorMaxLines: 4, // Permette all'errore di andare a capo ed essere completamente visibile
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        hintText: 'Ora sei a ${book.currentPage}',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Pagine totali: ${book.totalPages}'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'A che pagina sei arrivato?',
+                      errorText: errorMessage,
+                      errorMaxLines: 4,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      autofocus: true,
-                      onChanged: (val) {
-                        if (val.startsWith('0') && val.length > 1) {
-                          setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
-                        } else if (errorMessage != null) {
-                          setStateDialog(() => errorMessage = null);
-                        }
-                      },
+                      hintText: 'Ora sei a ${book.currentPage}',
                     ),
-                  ],
-                ),
+                    autofocus: true,
+                    onChanged: (val) {
+                      if (val.startsWith('0') && val.length > 1) {
+                        setStateDialog(() => errorMessage = 'Il numero non può iniziare con 0.');
+                      } else if (errorMessage != null) {
+                        setStateDialog(() => errorMessage = null);
+                      }
+                    },
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -122,29 +119,11 @@ class _BookListPageState extends State<BookListPage> {
                       setStateDialog(() {
                         errorMessage = 'Il numero di pagine lette non può superare il totale (${book.totalPages}).';
                       });
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (scrollController.hasClients) {
-                          scrollController.animateTo(
-                            scrollController.position.maxScrollExtent,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                          );
-                        }
-                      });
                       return;
                     }
                     if (page < 0) {
                       setStateDialog(() {
                         errorMessage = 'Il numero non può essere negativo.';
-                      });
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (scrollController.hasClients) {
-                          scrollController.animateTo(
-                            scrollController.position.maxScrollExtent,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOut,
-                          );
-                        }
                       });
                       return;
                     }
@@ -190,6 +169,7 @@ class _BookListPageState extends State<BookListPage> {
         return StatefulBuilder(
           builder: (dialogCtx, setStateDialog) {
             return AlertDialog(
+              scrollable: true,
               title: const Text('Modifica pagine totali'),
               content: TextField(
                 controller: controller,

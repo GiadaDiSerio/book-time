@@ -15,8 +15,8 @@ void showBookDetailSheet(BuildContext context, Book book) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (sheetContext) {
-      String plot = 'Caricamento trama...';
-      bool hasFetched = false;
+      String plot = book.plot ?? 'Caricamento trama...';
+      bool hasFetched = book.plot != null;
 
       return StatefulBuilder(
         builder: (ctx, setStateSheet) {
@@ -27,6 +27,7 @@ void showBookDetailSheet(BuildContext context, Book book) {
                 setStateSheet(() {
                   plot = fetchedPlot;
                 });
+                ctx.read<AppController>().updateBookPlot(book.id, fetchedPlot);
               }
             });
           }

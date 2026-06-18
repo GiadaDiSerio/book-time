@@ -8,6 +8,7 @@ class Book {
   int currentPage; // La pagina a cui sei arrivato
   final String? coverUrl;
   int rating;
+  String? plot;
 
   Book({
     String? id,
@@ -17,6 +18,7 @@ class Book {
     this.currentPage = 0,
     this.coverUrl,
     this.rating = 0,
+    this.plot,
   }) : id = id ?? const Uuid().v4();
 
   // Percentuale di completamento (da 0.0 a 1.0)
@@ -35,6 +37,7 @@ class Book {
       'currentPage': currentPage,
       'coverUrl': coverUrl,
       'rating': rating,
+      'plot': plot,
     };
   }
 
@@ -48,6 +51,7 @@ class Book {
       currentPage: json['currentPage'] ?? 0,
       coverUrl: json['coverUrl'],
       rating: json['rating'] ?? 0,
+      plot: json['plot'],
     );
   }
 }
