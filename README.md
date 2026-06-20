@@ -11,13 +11,13 @@
 - **Suggestions:** Discover new titles recommended based on your preferences.
 - **Smart Offline Support & Caching:** Uses `shared_preferences` for instantaneous Stale-while-revalidate data loading, and `cached_network_image` for persistent cover image caching, resulting in lightning-fast, zero-wait loading times.
 
-## Project Architecture (Three-Tier & MVC)
+## Project Architecture (MVC)
 
-The application is structured following a strict **Three-Tier** system architecture, with the presentation and application logic organized using the **Model-View-Controller (MVC)** design pattern. This ensures high cohesion and low coupling.
+The application is structured following the **Model-View-Controller (MVC)** design pattern. This ensures a clean Separation of Concerns (SoC), making the codebase highly cohesive, modular, and easy to maintain.
 
-- **Interface Layer (Views)**: Manages the UI and user interactions.
-- **Application Logic Layer (Controllers & Models)**: Defines the central data structures (`Book`) and orchestrates the app state using `provider`.
-- **Storage Layer (Services)**: Handles persistent data via `shared_preferences` and external HTTP requests to the Open Library API.
+- **Model**: Defines the core data structures (e.g., the `Book` entity) and handles data serialization, completely independent of the UI.
+- **View**: The passive Flutter UI components (`views/`) that render the application and capture user interactions. They react automatically to state changes.
+- **Controller**: The brain of the app (`controllers/`). It handles the business logic, orchestrates the global state using the `provider` package, and delegates data persistence and networking to dedicated **Services**.
 
 ### Directory Structure
 
@@ -42,7 +42,7 @@ lib/
     └── storage_service.dart  (Local persistence)
 ```
 
-## 🛠 Technologies Used
+## Technologies Used
 
 - **Framework:** [Flutter](https://flutter.dev/)
 - **State Management:** `provider`
